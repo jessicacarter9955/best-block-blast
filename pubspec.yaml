@@ -1,0 +1,26 @@
+name: chocoblock
+description: Native Flutter port of Block Blast — a chocolate-themed 8x8 block puzzle game built with the Flame engine.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.20.0
+  flame_audio: ^2.10.0
+  audioplayers: ^6.1.0
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/
+    - assets/audio/score/
+    - assets/audio/cheerful/

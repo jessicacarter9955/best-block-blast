@@ -1,0 +1,91 @@
+name: Build Android APK
+
+# Builds the ChocoBlock Flutter app for Android on every push to main
+# and on every tag matching v* (e.g. v0.1.0). Uploads the APK as a
+# GitHub Actions artifact (downloadable from the Actions tab) and, on
+# tags, also attaches it to a GitHub Release.
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Bootstrap Flutter project files
+        # `flutter create` is idempotent — it only adds files that are
+        # missing (gradle wrapper, gradlew, MainActivity by default
+        # location, etc.) and never overwrites existing files.
+        # Assumes the project lives at the repo root.
+        run: flutter create --platforms=android --org com.jessicacarter --project-name chocoblock .
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build debug APK (push to main/PR)
+        if: github.ref_type != 'tag'
+        run: flutter build apk --debug --no-tree-shake-icons
+
+      - name: Build release APK (tag push)
+        if: github.ref_type == 'tag'
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Rename APK with commit/tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+            BUILD_TYPE="release"
+          else
+            VERSION="${GITHUB_SHA::7}"
+            BUILD_TYPE="debug"
+          fi
+          mkdir -p artifacts
+          cp build/app/outputs/flutter-apk/app-${BUILD_TYPE}.apk \
+             "artifacts/chocoblock-${BUILD_TYPE}-${VERSION}.apk"
+          echo "APK_PATH=artifacts/chocoblock-${BUILD_TYPE}-${VERSION}.apk" >> $GITHUB_ENV
+          echo "APK_NAME=chocoblock-${BUILD_TYPE}-${VERSION}.apk" >> $GITHUB_ENV
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_NAME }}
+          path: artifacts/*.apk
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Attach APK to GitHub Release (on tag)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
