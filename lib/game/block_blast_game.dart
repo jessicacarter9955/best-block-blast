@@ -8,6 +8,7 @@ import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
+import 'package:flutter/material.dart' as flutter show TextPainter, TextSpan, TextStyle, FontWeight, TextDirection, Color;
 
 import 'audio.dart';
 import 'palette.dart';
@@ -69,6 +70,16 @@ class BlockBlastGame extends FlameGame with PanDetector {
   final Set<_Cell> _flashing = {};
   double _flashT = 0;
 
+  // Tutorial state — show hand animation until first piece is placed
+  bool _tutorialActive = true;
+  double _tutorialT = 0;
+
+  // Combo text state — show "Amazing!" / "Combo x2" / "+N" on line clears
+  String? _comboMsg; // "Amazing!", "Great!", "Combo x3", etc.
+  int? _comboBonus; // the +N score popup
+  double _comboT = 0; // time since combo text appeared (for animation)
+  static const double _comboDuration = 1.5; // seconds the combo text shows
+
   // Callbacks to Flutter overlay
   void Function(int score, int best)? onScoreChanged;
   void Function(bool over)? onGameOverChanged;
@@ -84,12 +95,18 @@ class BlockBlastGame extends FlameGame with PanDetector {
 
     // Add the background first (drawn behind everything).
     add(_BackgroundComponent(_sprites));
+    // Add the score panel (CupIcon + score number at the top).
+    add(_ScorePanelComponent(this, _sprites));
     // Add the board panel + grid cells.
     add(_BoardComponent(this, _sprites));
     // Add the tray (3 slots).
     add(_TrayComponent(this, _sprites));
     // Add the drag preview layer (renders floating piece + ghost preview).
     add(_DragPreviewComponent(this, _sprites));
+    // Add the tutorial hand (shows on first launch until first piece placed).
+    add(_TutorialHandComponent(this, _sprites));
+    // Add the combo text layer (floating "Amazing!" / "Combo x2" / "+N").
+    add(_ComboTextComponent(this));
 
     // Initial state.
     refillTray();
@@ -238,6 +255,9 @@ class BlockBlastGame extends FlameGame with PanDetector {
   }
 
   void placePiece(Piece piece, int ox, int oy, int slotIdx) {
+    // Dismiss tutorial on first piece placement
+    _tutorialActive = false;
+
     for (int r = 0; r < piece.shape.length; r++) {
       for (int c = 0; c < piece.shape[0].length; c++) {
         if (piece.shape[r][c] == 1) {
@@ -274,6 +294,11 @@ class BlockBlastGame extends FlameGame with PanDetector {
       _score += bonus;
       if (_score > _bestScore) _bestScore = _score;
       onScoreChanged?.call(_score, _bestScore);
+
+      // Trigger combo floating text
+      _comboMsg = _comboMessageFor(lines);
+      _comboBonus = bonus;
+      _comboT = 0;
 
       final toClear = <_Cell>{};
       for (final y in fullRows) {
@@ -334,11 +359,26 @@ class BlockBlastGame extends FlameGame with PanDetector {
     _gameOver = false;
     _paused = false;
     _flashing.clear();
+    _tutorialActive = true;
+    _tutorialT = 0;
+    _comboMsg = null;
+    _comboBonus = null;
+    _comboT = 0;
     refillTray();
     onScoreChanged?.call(_score, _bestScore);
     onGameOverChanged?.call(false);
     onPausedChanged?.call(false);
     _audio.startMusic();
+  }
+
+  String _comboMessageFor(int lines) {
+    switch (lines) {
+      case 1: return 'Good!';
+      case 2: return 'Great!';
+      case 3: return 'Amazing!';
+      case 4: return 'Awesome!';
+      default: return 'Combo x$lines!';
+    }
   }
 
   void togglePause() {
@@ -382,6 +422,16 @@ class BlockBlastGame extends FlameGame with PanDetector {
     super.update(dt);
     if (_flashing.isNotEmpty) {
       _flashT += dt;
+    }
+    if (_tutorialActive) {
+      _tutorialT += dt;
+    }
+    if (_comboMsg != null) {
+      _comboT += dt;
+      if (_comboT >= _comboDuration) {
+        _comboMsg = null;
+        _comboBonus = null;
+      }
     }
   }
 }
@@ -654,6 +704,179 @@ class _DragPreviewComponent extends PositionComponent with HasGameRef<BlockBlast
           );
         }
       }
+    }
+  }
+}
+
+// =============================================================================
+// Score panel — CupIcon (crown) + score number + best score at the top
+// =============================================================================
+
+class _ScorePanelComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late final Sprite _crownSprite;
+
+  _ScorePanelComponent(this.game_, this.sprites);
+
+  @override
+  Future<void> onLoad() async {
+    _crownSprite = sprites.get('CupIcon');
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (gameRef.isGameOver || gameRef.isPaused) return;
+
+    final w = gameRef.size.x;
+    final crownSize = 44.0;
+    final crownX = 16.0;
+    final crownY = 20.0;
+
+    // Draw the crown (CupIcon) on the left
+    _crownSprite.render(
+      canvas,
+      position: Vector2(crownX, crownY),
+      size: Vector2(crownSize, crownSize),
+    );
+
+    // Draw the score number in the center-top area (large, white)
+    final scoreText = '${gameRef.score}';
+    final scoreTp = flutter.TextPainter(
+      text: flutter.TextSpan(
+        text: scoreText,
+        style: const flutter.TextStyle(
+          color: flutter.Color(0xFFFFFFFF),
+          fontSize: 30,
+          fontWeight: flutter.FontWeight.w800,
+          letterSpacing: 1.0,
+        ),
+      ),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+
+    final scoreX = (w - scoreTp.width) / 2;
+    final scoreY = 24.0;
+    scoreTp.paint(canvas, Offset(scoreX, scoreY));
+
+    // Draw BEST score below the main score (small, muted gold)
+    final bestTp = flutter.TextPainter(
+      text: flutter.TextSpan(
+        text: 'BEST ${gameRef.bestScore}',
+        style: const flutter.TextStyle(
+          color: flutter.Color(0xFFFAB82A),
+          fontSize: 11,
+          fontWeight: flutter.FontWeight.w600,
+          letterSpacing: 0.8,
+        ),
+      ),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    bestTp.paint(canvas, Offset((w - bestTp.width) / 2, scoreY + 34));
+  }
+}
+
+// =============================================================================
+// Tutorial hand — animates from tray slot 0 to grid center on first launch
+// =============================================================================
+
+class _TutorialHandComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late final Sprite _handSprite;
+
+  _TutorialHandComponent(this.game_, this.sprites);
+
+  @override
+  Future<void> onLoad() async {
+    _handSprite = sprites.get('Hand');
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (!gameRef._tutorialActive || gameRef.isGameOver || gameRef.isPaused) return;
+
+    final t = gameRef._tutorialT;
+    final cycle = (t % 2.0) / 2.0;
+    double progress;
+    if (cycle < 0.5) {
+      progress = cycle * 2;
+    } else {
+      progress = 2 - cycle * 2;
+    }
+    progress = progress.clamp(0.0, 1.0);
+
+    final startX = gameRef.trayOriginX + gameRef.traySlotPx / 2;
+    final startY = gameRef.trayY + gameRef.traySlotPx / 2;
+    final endX = gameRef.gridX + gameRef.gridPx * 4;
+    final endY = gameRef.gridY + gameRef.gridPx * 4;
+
+    final x = startX + (endX - startX) * progress;
+    final y = startY + (endY - startY) * progress;
+
+    final handW = 72.0;
+    final handH = 60.0;
+    _handSprite.render(
+      canvas,
+      position: Vector2(x - handW / 2, y - handH - 10),
+      size: Vector2(handW, handH),
+    );
+  }
+}
+
+// =============================================================================
+// Combo text — floating "Amazing!" / "Combo x2" / "+N" on line clears
+// =============================================================================
+
+class _ComboTextComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
+  final BlockBlastGame game_;
+
+  _ComboTextComponent(this.game_);
+
+  @override
+  void render(Canvas canvas) {
+    final msg = gameRef._comboMsg;
+    if (msg == null) return;
+
+    final t = gameRef._comboT;
+    final duration = BlockBlastGame._comboDuration;
+    final floatUp = (t / duration).clamp(0.0, 1.0) * 40;
+    final opacity = t > duration - 0.5
+        ? (1.0 - (t - (duration - 0.5)) / 0.5).clamp(0.0, 1.0)
+        : 1.0;
+
+    final w = gameRef.size.x;
+    final centerX = w / 2;
+    final centerY = gameRef.gridY + gameRef.gridPx * 3 - floatUp;
+
+    final msgTp = flutter.TextPainter(
+      text: flutter.TextSpan(
+        text: msg,
+        style: flutter.TextStyle(
+          color: const flutter.Color(0xFFFAB82A).withOpacity(opacity),
+          fontSize: 32,
+          fontWeight: flutter.FontWeight.w800,
+          letterSpacing: 1.2,
+        ),
+      ),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    msgTp.paint(canvas, Offset(centerX - msgTp.width / 2, centerY));
+
+    final bonus = gameRef._comboBonus;
+    if (bonus != null) {
+      final bonusTp = flutter.TextPainter(
+        text: flutter.TextSpan(
+          text: '+$bonus',
+          style: flutter.TextStyle(
+            color: const flutter.Color(0xFFFFFFFF).withOpacity(opacity),
+            fontSize: 22,
+            fontWeight: flutter.FontWeight.w700,
+          ),
+        ),
+        textDirection: flutter.TextDirection.ltr,
+      )..layout();
+      bonusTp.paint(canvas, Offset(centerX - bonusTp.width / 2, centerY + 38));
     }
   }
 }

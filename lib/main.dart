@@ -18,7 +18,7 @@ class ChocoBlockApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: BlockPalette.blockColors[1], // brown
+          seedColor: BlockPalette.blockColors[1],
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
@@ -37,8 +37,6 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late final BlockBlastGame _game;
-  int _score = 0;
-  int _bestScore = 0;
   bool _gameOver = false;
   bool _paused = false;
   bool _musicOn = true;
@@ -48,9 +46,6 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
     _game = BlockBlastGame();
-    _game.onScoreChanged = (score, best) {
-      if (mounted) setState(() { _score = score; _bestScore = best; });
-    };
     _game.onGameOverChanged = (over) {
       if (mounted) setState(() => _gameOver = over);
     };
@@ -64,7 +59,6 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
-    _game.onScoreChanged = null;
     _game.onGameOverChanged = null;
     _game.onPausedChanged = null;
     _game.onAudioTogglesChanged = null;
@@ -72,21 +66,10 @@ class _GameScreenState extends State<GameScreen> {
     super.dispose();
   }
 
-  void _restart() {
-    _game.restart();
-  }
-
-  void _togglePause() {
-    _game.togglePause();
-  }
-
-  void _toggleMusic() {
-    _game.toggleMusic();
-  }
-
-  void _toggleSfx() {
-    _game.toggleSfx();
-  }
+  void _restart() => _game.restart();
+  void _togglePause() => _game.togglePause();
+  void _toggleMusic() => _game.toggleMusic();
+  void _toggleSfx() => _game.toggleSfx();
 
   @override
   Widget build(BuildContext context) {
@@ -98,41 +81,21 @@ class _GameScreenState extends State<GameScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // The Flame game canvas.
             GameWidget(game: _game),
 
-            // Header: title + score panel + buttons
+            // Top-right buttons only (score panel is rendered in Flame)
             Positioned(
               top: 12,
-              left: 12,
               right: 12,
-              child: _Header(
-                score: _score,
-                bestScore: _bestScore,
-                paused: _paused,
-                musicOn: _musicOn,
-                sfxOn: _sfxOn,
-                onTogglePause: _togglePause,
-                onToggleMusic: _toggleMusic,
-                onToggleSfx: _toggleSfx,
-              ),
-            ),
-
-            // Footer hint
-            Positioned(
-              bottom: 8,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  'Drag pieces onto the grid · clear rows and columns to score',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: BlockPalette.textMuted,
-                    fontSize: 11,
-                    letterSpacing: 0.4,
-                  ),
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _IconBtn(icon: _paused ? Icons.play_arrow : Icons.pause, onTap: _togglePause),
+                  const SizedBox(width: 6),
+                  _IconBtn(icon: _musicOn ? Icons.music_note : Icons.music_off, onTap: _toggleMusic),
+                  const SizedBox(width: 6),
+                  _IconBtn(icon: _sfxOn ? Icons.volume_up : Icons.volume_mute, onTap: _toggleSfx),
+                ],
               ),
             ),
 
@@ -160,8 +123,8 @@ class _GameScreenState extends State<GameScreen> {
                     color: BlockPalette.bg.withOpacity(0.92),
                     alignment: Alignment.center,
                     child: _GameOverCard(
-                      finalScore: _score,
-                      bestScore: _bestScore,
+                      finalScore: _game.score,
+                      bestScore: _game.bestScore,
                       onRestart: _restart,
                     ),
                   ),
@@ -170,130 +133,6 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// =============================================================================
-// Header (title + score panel + pause/music/sfx buttons)
-// =============================================================================
-
-class _Header extends StatelessWidget {
-  final int score;
-  final int bestScore;
-  final bool paused;
-  final bool musicOn;
-  final bool sfxOn;
-  final VoidCallback onTogglePause;
-  final VoidCallback onToggleMusic;
-  final VoidCallback onToggleSfx;
-
-  const _Header({
-    required this.score,
-    required this.bestScore,
-    required this.paused,
-    required this.musicOn,
-    required this.sfxOn,
-    required this.onTogglePause,
-    required this.onToggleMusic,
-    required this.onToggleSfx,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Title
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'BLOCK',
-                    style: TextStyle(
-                      color: BlockPalette.text,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                  const TextSpan(text: ' '),
-                  TextSpan(
-                    text: 'BLAST',
-                    style: TextStyle(
-                      color: BlockPalette.blockColors[2], // gold
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'BEST: $bestScore',
-              style: TextStyle(
-                color: BlockPalette.textMuted,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
-              ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        // Score pill
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: BlockPalette.gridCell.withOpacity(0.55),
-            border: Border.all(color: BlockPalette.gridBorder, width: 1.4),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'SCORE',
-                style: TextStyle(
-                  color: BlockPalette.textMuted,
-                  fontSize: 10,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                '$score',
-                style: TextStyle(
-                  color: BlockPalette.text,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Buttons
-        _IconBtn(
-          icon: paused ? Icons.play_arrow : Icons.pause,
-          onTap: onTogglePause,
-        ),
-        _IconBtn(
-          icon: musicOn ? Icons.music_note : Icons.music_off,
-          onTap: onToggleMusic,
-        ),
-        _IconBtn(
-          icon: sfxOn ? Icons.volume_up : Icons.volume_mute,
-          onTap: onToggleSfx,
-        ),
-      ],
     );
   }
 }
@@ -323,10 +162,6 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// Pause overlay
-// =============================================================================
-
 class _PauseCard extends StatelessWidget {
   final VoidCallback onResume;
   final VoidCallback onRestart;
@@ -346,15 +181,7 @@ class _PauseCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'Paused',
-            style: TextStyle(
-              color: BlockPalette.blockColors[2], // gold
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
-            ),
-          ),
+          Text('Paused', style: TextStyle(color: BlockPalette.blockColors[2], fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onResume,
@@ -368,37 +195,20 @@ class _PauseCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          TextButton(
-            onPressed: onRestart,
-            child: Text(
-              'Restart game',
-              style: TextStyle(color: BlockPalette.textMuted, fontSize: 12),
-            ),
-          ),
+          TextButton(onPressed: onRestart, child: Text('Restart game', style: TextStyle(color: BlockPalette.textMuted, fontSize: 12))),
           const SizedBox(height: 8),
-          Text(
-            'or tap anywhere',
-            style: TextStyle(color: BlockPalette.textMuted, fontSize: 10, letterSpacing: 0.4),
-          ),
+          Text('or tap anywhere', style: TextStyle(color: BlockPalette.textMuted, fontSize: 10, letterSpacing: 0.4)),
         ],
       ),
     );
   }
 }
 
-// =============================================================================
-// Game over overlay
-// =============================================================================
-
 class _GameOverCard extends StatelessWidget {
   final int finalScore;
   final int bestScore;
   final VoidCallback onRestart;
-  const _GameOverCard({
-    required this.finalScore,
-    required this.bestScore,
-    required this.onRestart,
-  });
+  const _GameOverCard({required this.finalScore, required this.bestScore, required this.onRestart});
 
   @override
   Widget build(BuildContext context) {
@@ -414,41 +224,24 @@ class _GameOverCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'GAME OVER',
-            style: TextStyle(
-              color: BlockPalette.blockColors[2], // gold
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.6,
-            ),
-          ),
+          Text('GAME OVER', style: TextStyle(color: BlockPalette.blockColors[2], fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: 1.6)),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('SCORE', style: TextStyle(color: BlockPalette.textMuted, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
-                  const SizedBox(height: 4),
-                  Text('$finalScore', style: TextStyle(color: BlockPalette.text, fontSize: 26, fontWeight: FontWeight.w800)),
-                ],
-              ),
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                Text('SCORE', style: TextStyle(color: BlockPalette.textMuted, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
+                const SizedBox(height: 4),
+                Text('$finalScore', style: TextStyle(color: BlockPalette.text, fontSize: 26, fontWeight: FontWeight.w800)),
+              ]),
               const SizedBox(width: 24),
-              Container(
-                width: 1, height: 40,
-                color: BlockPalette.gridBorder.withOpacity(0.6),
-              ),
+              Container(width: 1, height: 40, color: BlockPalette.gridBorder.withOpacity(0.6)),
               const SizedBox(width: 24),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('BEST', style: TextStyle(color: BlockPalette.textMuted, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
-                  const SizedBox(height: 4),
-                  Text('$bestScore', style: TextStyle(color: BlockPalette.blockColors[2], fontSize: 26, fontWeight: FontWeight.w800)),
-                ],
-              ),
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                Text('BEST', style: TextStyle(color: BlockPalette.textMuted, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
+                const SizedBox(height: 4),
+                Text('$bestScore', style: TextStyle(color: BlockPalette.blockColors[2], fontSize: 26, fontWeight: FontWeight.w800)),
+              ]),
             ],
           ),
           const SizedBox(height: 24),
@@ -464,10 +257,7 @@ class _GameOverCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'or tap anywhere',
-            style: TextStyle(color: BlockPalette.textMuted, fontSize: 10, letterSpacing: 0.4),
-          ),
+          Text('or tap anywhere', style: TextStyle(color: BlockPalette.textMuted, fontSize: 10, letterSpacing: 0.4)),
         ],
       ),
     );
