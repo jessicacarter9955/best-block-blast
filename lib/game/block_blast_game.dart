@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'dart:ui' show Canvas, Color, Offset, Paint, PaintingStyle, RRect, Radius, Rect;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
@@ -35,7 +37,7 @@ class BlockBlastGame extends FlameGame {
   }
 
   @override
-  ui.Color backgroundColor() => const ui.Color(0xFF0A1119);
+  Color backgroundColor() => const Color(0xFF0A1119);
 }
 
 class _SpriteContactSheet extends PositionComponent {
@@ -43,7 +45,7 @@ class _SpriteContactSheet extends PositionComponent {
   _SpriteContactSheet(this.sprites);
 
   @override
-  void render(ui.Canvas canvas) {
+  void render(Canvas canvas) {
     super.render(canvas);
     final w = game.size.x;
     final h = game.size.y;
@@ -60,7 +62,7 @@ class _SpriteContactSheet extends PositionComponent {
       ),
       textDirection: flutter.TextDirection.ltr,
     )..layout();
-    header.paint(canvas, const ui.Offset(16, 16));
+    header.paint(canvas, const Offset(16, 16));
 
     final sub = flutter.TextPainter(
       text: flutter.TextSpan(
@@ -72,7 +74,7 @@ class _SpriteContactSheet extends PositionComponent {
       ),
       textDirection: flutter.TextDirection.ltr,
     )..layout();
-    sub.paint(canvas, ui.Offset(16, 16 + header.height + 4));
+    sub.paint(canvas, Offset(16, 16 + header.height + 4));
 
     // Grid of sprites — 6 columns
     final cols = 6;
@@ -104,12 +106,12 @@ class _SpriteContactSheet extends PositionComponent {
       final dy = y + (cellH - drawH) / 2;
 
       // Cell border
-      final cellRect = ui.Rect.fromLTWH(x, y, cellW, cellH);
-      final cellRrect = ui.RRect.fromRectAndRadius(cellRect, const ui.Radius.circular(6));
-      canvas.drawRRect(cellRrect, ui.Paint()..color = const ui.Color(0x3323344F));
-      canvas.drawRRect(cellRrect, ui.Paint()
-        ..color = const ui.Color(0xFF3E559F)
-        ..style = ui.PaintingStyle.stroke
+      final cellRect = Rect.fromLTWH(x, y, cellW, cellH);
+      final cellRrect = RRect.fromRectAndRadius(cellRect, const Radius.circular(6));
+      canvas.drawRRect(cellRrect, Paint()..color = const Color(0x3323344F));
+      canvas.drawRRect(cellRrect, Paint()
+        ..color = const Color(0xFF3E559F)
+        ..style = PaintingStyle.stroke
         ..strokeWidth = 0.5);
 
       // Sprite itself
@@ -133,7 +135,7 @@ class _SpriteContactSheet extends PositionComponent {
         maxLines: 1,
         ellipsis: '..',
       )..layout(maxWidth: cellW);
-      label.paint(canvas, ui.Offset(x + 2, y + cellH + 2));
+      label.paint(canvas, Offset(x + 2, y + cellH + 2));
     }
   }
 }

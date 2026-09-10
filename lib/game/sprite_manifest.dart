@@ -1,6 +1,3 @@
-import 'dart:ui' as ui;
-import 'package:flame/extensions.dart';
-
 /// Sprite manifest loaded from assets/sprites-named/manifest.json.
 ///
 /// Each entry maps a Construct 3 object name to one or more sprite

@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
+import 'package:flame/image_composition.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'sprite_manifest.dart';
@@ -35,9 +38,8 @@ class SpriteCache {
     }
     for (final file in uniqueFiles) {
       final bytes = await rootBundle.load(file);
-      final codec = await ui.instantiateImageCodecFromBuffer(
-        await ui.ImmutableBuffer.fromUint8List(bytes.buffer.asUint8List()),
-      );
+      final data = bytes.buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(data);
       final frame = await codec.getNextFrame();
       images[file] = frame.image;
     }
@@ -54,11 +56,9 @@ class SpriteCache {
     }
     final a = assets[frame.clamp(0, assets.length - 1)];
     final image = _images[a.file]!;
-    return Sprite(
-      image,
-      srcPosition: Vector2(0, 0),
-      srcSize: Vector2(a.srcW.toDouble() + 4, a.srcH.toDouble() + 4),
-    );
+    // The PNG file is already a cropped sprite (extracted with 2px
+    // padding for AA edges), so we draw the whole image.
+    return Sprite(image);
   }
 
   /// Returns ALL frames for an object (e.g. for animation).
@@ -67,11 +67,7 @@ class SpriteCache {
     if (assets == null || assets.isEmpty) return [];
     return assets.map((a) {
       final image = _images[a.file]!;
-      return Sprite(
-        image,
-        srcPosition: Vector2.zero(),
-        srcSize: Vector2(a.srcW.toDouble() + 4, a.srcH.toDouble() + 4),
-      );
+      return Sprite(image);
     }).toList();
   }
 
