@@ -290,7 +290,7 @@ class BlockBlastGame extends FlameGame with PanDetector {
       _flashing.addAll(toClear);
       _flashT = 0;
 
-      Timer(const Duration(milliseconds: 320), () {
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
         for (final c in toClear) {
           _grid[c.y][c.x] = null;
         }
