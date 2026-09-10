@@ -47,8 +47,8 @@ class _SpriteContactSheet extends PositionComponent {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    final w = game.size.x;
-    final h = game.size.y;
+    final w = gameRef.size.x;
+    final h = gameRef.size.y;
 
     // Header text
     final header = flutter.TextPainter(
