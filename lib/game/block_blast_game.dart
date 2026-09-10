@@ -40,7 +40,7 @@ class BlockBlastGame extends FlameGame {
   Color backgroundColor() => const Color(0xFF0A1119);
 }
 
-class _SpriteContactSheet extends PositionComponent {
+class _SpriteContactSheet extends PositionComponent with HasGameRef {
   final SpriteCache sprites;
   _SpriteContactSheet(this.sprites);
 
