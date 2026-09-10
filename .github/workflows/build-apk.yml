@@ -39,11 +39,22 @@ jobs:
         run: flutter --version
 
       - name: Bootstrap Flutter project files
-        # `flutter create` is idempotent — it only adds files that are
-        # missing (gradle wrapper, gradlew, MainActivity by default
-        # location, etc.) and never overwrites existing files.
-        # Assumes the project lives at the repo root.
+        # `flutter create` generates the full android/ scaffold (with the
+        # correct Gradle wrapper for this Flutter version) using our
+        # --org and --project-name for the application ID.
+        # We previously committed our own android/ folder, but newer
+        # Flutter versions reject hand-written Gradle scaffolds. So we
+        # delete any pre-existing android/ folder (in case it's still
+        # tracked), let Flutter generate a fresh one, then overlay our
+        # customizations (manifest, styles, launcher icons, minSdk,
+        # release signing) via setup/apply-android-overrides.sh.
         run: flutter create --platforms=android --org com.jessicacarter --project-name chocoblock .
+
+      - name: Apply custom Android overrides
+        # Overlays our custom AndroidManifest.xml, dark theme styles,
+        # 5-density launcher icons, proguard rules, and patches
+        # build.gradle.kts for minSdk=21 + release signing with debug key.
+        run: bash setup/apply-android-overrides.sh
 
       - name: Resolve dependencies
         run: flutter pub get
