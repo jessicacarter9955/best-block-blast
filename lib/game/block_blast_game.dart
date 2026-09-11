@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async' as async;
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:ui' show Canvas, Color, Offset, Paint, PaintingStyle, RRect, Radius, Rect, Image;
@@ -55,7 +55,7 @@ class BlockBlastGame extends FlameGame with PanDetector {
 
   // Revive state
   double _reviveTimeLeft = 5.0;
-  dart:async.Timer? _reviveTimer;
+  async.Timer? _reviveTimer;
 
   // Callbacks
   void Function(int score, int best)? onScoreChanged;
@@ -340,7 +340,7 @@ class BlockBlastGame extends FlameGame with PanDetector {
     _reviveTimeLeft = 5.0;
     onStateChanged?.call(_state);
     _reviveTimer?.cancel();
-    _reviveTimer = dart:async.Timer.periodic(const Duration(milliseconds: 100), (t) {
+    _reviveTimer = async.Timer.periodic(const Duration(milliseconds: 100), (t) {
       _reviveTimeLeft -= 0.1;
       if (_reviveTimeLeft <= 0) {
         t.cancel();
@@ -744,7 +744,7 @@ class _HomeScreenComponent extends PositionComponent with HasGameRef<BlockBlastG
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isHome) return;
-    final p = info.eventPosition.global;
+    final p = info.globalPosition;
     if (_playRect.contains(p.toOffset())) {
       gameRef.startGame();
     } else if (_rankingRect.contains(p.toOffset())) {
@@ -801,7 +801,7 @@ class _PausePopupComponent extends PositionComponent with HasGameRef<BlockBlastG
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isPaused) return;
-    final p = info.eventPosition.global;
+    final p = info.globalPosition;
     if (_homeRect.contains(p.toOffset())) {
       gameRef.goHome();
     } else if (_resetRect.contains(p.toOffset())) {
@@ -935,7 +935,7 @@ class _ReviveComponent extends PositionComponent with HasGameRef<BlockBlastGame>
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isRevive) return;
-    final p = info.eventPosition.global;
+    final p = info.globalPosition;
     if (_reviveRect.contains(p.toOffset())) {
       gameRef.revive();
     } else if (_skipRect.contains(p.toOffset())) {
@@ -1008,7 +1008,7 @@ class _RankingPopupComponent extends PositionComponent with HasGameRef<BlockBlas
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isRanking) return;
-    final p = info.eventPosition.global;
+    final p = info.globalPosition;
     if (_closeRect.contains(p.toOffset()) || !_popupRect.contains(p.toOffset())) {
       gameRef.closeRanking();
     }
