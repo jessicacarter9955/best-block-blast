@@ -8,34 +8,17 @@ import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
-import 'package:flutter/material.dart' as flutter show TextPainter, TextSpan, TextStyle, FontWeight, TextDirection, Color;
+import 'package:flutter/material.dart' as flutter show TextPainter, TextSpan, TextStyle, FontWeight, TextDirection, Color, TextDecoration;
 
 import 'audio.dart';
 import 'palette.dart';
 import 'shapes.dart';
 import 'sprite_cache.dart';
 
-/// The full Block Blast game — a native Flame port using the original
-/// Construct 3 sprite assets (chocolate recolor applied to the Block
-/// sprite sheet).
-///
-/// Layout (portrait phone):
-///   - Top: header overlay (Flutter-rendered: title + score panel)
-///   - Middle: Board sprite (8x8 grid panel) with block cells
-///   - Bottom: 3-slot tray with piece previews
-///   - Background: Bg sprite (vertical blue gradient strip) tiled to
-///     fill the screen
-///
-/// State:
-///   - 8x8 grid of (colorIdx | null)
-///   - 3 tray slots each holding a Piece (or null)
-///   - score, game-over flag, music/sfx toggles
-///
-/// Drag-and-drop:
-///   - Pan gesture at game level
-///   - PanStart: hit-test tray slots, start drag if hit
-///   - PanUpdate: move floating piece + show preview on grid
-///   - PanEnd: drop piece if it fits, snap back to tray otherwise
+/// Game state enum — matches the original Construct 3 GameState variable.
+enum GameState { home, playing, paused, revive, gameOver, ranking }
+
+/// The full Block Blast game — native Flame port using original sprites.
 class BlockBlastGame extends FlameGame with PanDetector {
   static const int kGridSize = 8;
   static const int kTraySize = 3;
@@ -43,24 +26,16 @@ class BlockBlastGame extends FlameGame with PanDetector {
   late SpriteCache _sprites;
   late GameAudio _audio;
 
-  // Layout (set in onGameResize)
-  late double _gridPx; // size of one cell
-  late double _gridX; // top-left x of grid (board panel inside)
-  late double _gridY; // top-left y of grid (board panel inside)
-  late double _boardPx; // size of the Board sprite (panel including border)
-  late double _boardX; // top-left x of board sprite
-  late double _boardY; // top-left y of board sprite
-  late double _trayY;
-  late double _traySlotPx;
-  late double _headerReserve;
+  // Layout
+  late double _gridPx, _gridX, _gridY, _boardPx, _boardX, _boardY;
+  late double _trayY, _traySlotPx;
 
   // State
-  late List<List<int?>> _grid; // each cell is null or colorIdx 0..7
+  late List<List<int?>> _grid;
   final List<Piece?> _tray = List.filled(kTraySize, null);
   int _score = 0;
   int _bestScore = 0;
-  bool _gameOver = false;
-  bool _paused = false;
+  GameState _state = GameState.home;
 
   // Drag state
   _DragState? _drag;
@@ -69,21 +44,22 @@ class BlockBlastGame extends FlameGame with PanDetector {
   // Visuals
   final Set<_Cell> _flashing = {};
   double _flashT = 0;
-
-  // Tutorial state — show hand animation until first piece is placed
-  bool _tutorialActive = true;
+  bool _tutorialActive = false;
   double _tutorialT = 0;
 
-  // Combo text state — show "Amazing!" / "Combo x2" / "+N" on line clears
-  String? _comboMsg; // "Amazing!", "Great!", "Combo x3", etc.
-  int? _comboBonus; // the +N score popup
-  double _comboT = 0; // time since combo text appeared (for animation)
-  static const double _comboDuration = 1.5; // seconds the combo text shows
+  // Combo state
+  int? _comboCheerfulFrame;
+  int? _comboBonus;
+  double _comboT = 0;
+  static const double _comboDuration = 1.6;
 
-  // Callbacks to Flutter overlay
+  // Revive state
+  double _reviveTimeLeft = 5.0;
+  Timer? _reviveTimer;
+
+  // Callbacks
   void Function(int score, int best)? onScoreChanged;
-  void Function(bool over)? onGameOverChanged;
-  void Function(bool paused)? onPausedChanged;
+  void Function(GameState state)? onStateChanged;
   void Function(bool music, bool sfx)? onAudioTogglesChanged;
 
   @override
@@ -93,24 +69,19 @@ class BlockBlastGame extends FlameGame with PanDetector {
     await _audio.init();
     _grid = List.generate(kGridSize, (_) => List<int?>.filled(kGridSize, null));
 
-    // Add the background first (drawn behind everything).
     add(_BackgroundComponent(_sprites));
-    // Add the score panel (CupIcon + score number at the top).
     add(_ScorePanelComponent(this, _sprites));
-    // Add the board panel + grid cells.
     add(_BoardComponent(this, _sprites));
-    // Add the tray (3 slots).
     add(_TrayComponent(this, _sprites));
-    // Add the drag preview layer (renders floating piece + ghost preview).
     add(_DragPreviewComponent(this, _sprites));
-    // Add the tutorial hand (shows on first launch until first piece placed).
     add(_TutorialHandComponent(this, _sprites));
-    // Add the combo text layer (floating "Amazing!" / "Combo x2" / "+N").
-    add(_ComboTextComponent(this));
-
-    // Initial state.
-    refillTray();
-    _audio.startMusic();
+    add(_ComboTextComponent(this, _sprites));
+    add(_ComboHeartComponent(this, _sprites));
+    add(_HomeScreenComponent(this, _sprites));
+    add(_PausePopupComponent(this, _sprites));
+    add(_GameOverComponent(this, _sprites));
+    add(_ReviveComponent(this, _sprites));
+    add(_RankingPopupComponent(this, _sprites));
   }
 
   @override
@@ -118,43 +89,29 @@ class BlockBlastGame extends FlameGame with PanDetector {
     super.onGameResize(size);
     final w = size.x;
     final h = size.y;
+    final padding = 16.0;
+    final gap = 16.0;
+    final headerReserve = 70.0;
+    final footerReserve = 30.0;
 
-    // Layout reserves:
-    //   top: header overlay (~70px) rendered by Flutter
-    //   bottom: footer hint (~30px) rendered by Flutter
-    _headerReserve = 70;
-    final footerReserve = 30;
-    final gap = 16;
-    final padding = 16;
-
-    // Tray: 3 squares below the grid, each slot is square.
-    // Tray width = w - padding*2, slot = (trayW - gap*2) / 3
     final trayW = w - padding * 2;
     _traySlotPx = (trayW - gap * 2) / 3;
 
-    // The grid + tray must fit in: h - headerReserve - footerReserve - gap (between grid and tray) - gap (above grid)
-    // Grid size = the board panel size = a square.
-    final availableForGrid = h - _headerReserve - footerReserve - gap * 2 - _traySlotPx - gap;
+    final availableForGrid = h - headerReserve - footerReserve - gap * 2 - _traySlotPx - gap;
     final maxGridW = w - padding * 2;
     _boardPx = maxGridW < availableForGrid ? maxGridW : availableForGrid;
     _boardX = (w - _boardPx) / 2;
-    _boardY = _headerReserve + gap;
+    _boardY = headerReserve + gap;
 
-    // The grid (cells) is inset from the board sprite — the board sprite
-    // has a thick border. Empirically the board sprite is 994x994 and
-    // the inner grid is roughly 8x125 = 1000px (but board is 994, so
-    // inner grid is ~7/8 of the board, with ~6% padding on each side).
-    // For our layout we'll just give the grid a small inset (3% of boardPx).
     final inset = _boardPx * 0.04;
     _gridX = _boardX + inset;
     _gridY = _boardY + inset;
     _gridPx = (_boardPx - inset * 2) / kGridSize;
 
-    // Tray Y: below the board + gap.
     _trayY = _boardY + _boardPx + gap;
   }
 
-  // Public getters used by child components
+  // Public getters
   double get gridPx => _gridPx;
   double get gridX => _gridX;
   double get gridY => _gridY;
@@ -164,21 +121,80 @@ class BlockBlastGame extends FlameGame with PanDetector {
   double get trayY => _trayY;
   double get traySlotPx => _traySlotPx;
   double get trayOriginX => 16;
-  Size get viewport => size.toSize();
   SpriteCache get sprites => _sprites;
   GameAudio get audio => _audio;
-
-  // ---- State accessors ----
+  GameState get state => _state;
   int? cellAt(int x, int y) => _grid[y][x];
   List<Piece?> get traySnapshot => List.unmodifiable(_tray);
   int get score => _score;
   int get bestScore => _bestScore;
-  bool get isGameOver => _gameOver;
-  bool get isPaused => _paused;
   bool get musicOn => _audio.musicOn;
   bool get sfxOn => _audio.sfxOn;
+  bool get isPlaying => _state == GameState.playing;
+  bool get isHome => _state == GameState.home;
+  bool get isPaused => _state == GameState.paused;
+  bool get isGameOver => _state == GameState.gameOver;
+  bool get isRevive => _state == GameState.revive;
+  bool get isRanking => _state == GameState.ranking;
+  double get reviveTimeLeft => _reviveTimeLeft;
 
-  // ---- Tray logic ----
+  // State transitions
+  void startGame() {
+    _grid = List.generate(kGridSize, (_) => List<int?>.filled(kGridSize, null));
+    _score = 0;
+    for (int i = 0; i < kTraySize; i++) _tray[i] = null;
+    refillTray();
+    _tutorialActive = true;
+    _tutorialT = 0;
+    _flashing.clear();
+    _comboCheerfulFrame = null;
+    _comboBonus = null;
+    _state = GameState.playing;
+    onScoreChanged?.call(_score, _bestScore);
+    onStateChanged?.call(_state);
+    _audio.startMusic();
+  }
+
+  void goHome() {
+    _state = GameState.home;
+    _audio.pauseMusic();
+    onStateChanged?.call(_state);
+  }
+
+  void openPause() {
+    if (_state != GameState.playing) return;
+    _state = GameState.paused;
+    _audio.pauseMusic();
+    onStateChanged?.call(_state);
+  }
+
+  void closePause() {
+    if (_state != GameState.paused) return;
+    _state = GameState.playing;
+    _audio.resumeMusic();
+    onStateChanged?.call(_state);
+  }
+
+  void openRanking() {
+    _state = GameState.ranking;
+    onStateChanged?.call(_state);
+  }
+
+  void closeRanking() {
+    _state = GameState.playing;
+    onStateChanged?.call(_state);
+  }
+
+  void toggleMusic() {
+    _audio.toggleMusic();
+    onAudioTogglesChanged?.call(_audio.musicOn, _audio.sfxOn);
+  }
+
+  void toggleSfx() {
+    _audio.toggleSfx();
+    onAudioTogglesChanged?.call(_audio.musicOn, _audio.sfxOn);
+  }
+
   void refillTray() {
     final rng = Random();
     for (int i = 0; i < kTraySize; i++) {
@@ -189,10 +205,9 @@ class BlockBlastGame extends FlameGame with PanDetector {
     }
   }
 
-  // ---- Drag handling (game-level) ----
   @override
   void onPanStart(DragStartInfo info) {
-    if (_gameOver || _paused) return;
+    if (_state != GameState.playing) return;
     final pos = info.eventPosition.global;
     final slotIdx = _slotAt(pos);
     if (slotIdx == null) return;
@@ -231,11 +246,9 @@ class BlockBlastGame extends FlameGame with PanDetector {
     final d = _drag;
     if (d == null) return;
     _drag = null;
-
     final shape = d.piece.shape;
     final cellX = ((pos.x - _gridX) / _gridPx).floor() - (shape[0].length ~/ 2);
     final cellY = ((pos.y - _gridY) / _gridPx).floor() - (shape.length ~/ 2);
-
     if (pieceFits(d.piece, cellX, cellY)) {
       placePiece(d.piece, cellX, cellY, d.slotIdx);
     }
@@ -255,9 +268,7 @@ class BlockBlastGame extends FlameGame with PanDetector {
   }
 
   void placePiece(Piece piece, int ox, int oy, int slotIdx) {
-    // Dismiss tutorial on first piece placement
     _tutorialActive = false;
-
     for (int r = 0; r < piece.shape.length; r++) {
       for (int c = 0; c < piece.shape[0].length; c++) {
         if (piece.shape[r][c] == 1) {
@@ -268,10 +279,8 @@ class BlockBlastGame extends FlameGame with PanDetector {
     _score += piece.cellCount;
     if (_score > _bestScore) _bestScore = _score;
     onScoreChanged?.call(_score, _bestScore);
-
     _audio.sfxPut();
 
-    // Find completed rows/cols
     final fullRows = <int>[];
     final fullCols = <int>[];
     for (int y = 0; y < kGridSize; y++) {
@@ -280,10 +289,7 @@ class BlockBlastGame extends FlameGame with PanDetector {
     for (int x = 0; x < kGridSize; x++) {
       bool full = true;
       for (int y = 0; y < kGridSize; y++) {
-        if (_grid[y][x] == null) {
-          full = false;
-          break;
-        }
+        if (_grid[y][x] == null) { full = false; break; }
       }
       if (full) fullCols.add(x);
     }
@@ -294,47 +300,74 @@ class BlockBlastGame extends FlameGame with PanDetector {
       _score += bonus;
       if (_score > _bestScore) _bestScore = _score;
       onScoreChanged?.call(_score, _bestScore);
-
-      // Trigger combo floating text
-      _comboMsg = _comboMessageFor(lines);
+      _comboCheerfulFrame = _cheerfulFrameFor(lines);
       _comboBonus = bonus;
       _comboT = 0;
 
       final toClear = <_Cell>{};
       for (final y in fullRows) {
-        for (int x = 0; x < kGridSize; x++) {
-          toClear.add(_Cell(x, y));
-        }
+        for (int x = 0; x < kGridSize; x++) toClear.add(_Cell(x, y));
       }
       for (final x in fullCols) {
-        for (int y = 0; y < kGridSize; y++) {
-          toClear.add(_Cell(x, y));
-        }
+        for (int y = 0; y < kGridSize; y++) toClear.add(_Cell(x, y));
       }
-
       _flashing.addAll(toClear);
       _flashT = 0;
 
       Future<void>.delayed(const Duration(milliseconds: 320), () {
-        for (final c in toClear) {
-          _grid[c.y][c.x] = null;
-        }
+        for (final c in toClear) _grid[c.y][c.x] = null;
         _flashing.clear();
         _audio.sfxScore();
       });
     }
 
     _tray[slotIdx] = null;
-    if (_tray.every((p) => p == null)) {
-      refillTray();
-    }
+    if (_tray.every((p) => p == null)) refillTray();
 
-    if (!anyPieceFits()) {
-      _gameOver = true;
-      onGameOverChanged?.call(true);
-      _audio.sfxLose();
-      _audio.stopMusic();
+    if (!anyPieceFits()) _triggerGameOver();
+  }
+
+  int _cheerfulFrameFor(int lines) {
+    if (lines <= 1) return 2;
+    if (lines == 2) return 3;
+    if (lines == 3) return 4;
+    if (lines == 4) return 5;
+    return 6;
+  }
+
+  void _triggerGameOver() {
+    _state = GameState.revive;
+    _reviveTimeLeft = 5.0;
+    onStateChanged?.call(_state);
+    _reviveTimer?.cancel();
+    _reviveTimer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+      _reviveTimeLeft -= 0.1;
+      if (_reviveTimeLeft <= 0) {
+        t.cancel();
+        _state = GameState.gameOver;
+        _audio.sfxLose();
+        _audio.stopMusic();
+        onStateChanged?.call(_state);
+      }
+    });
+  }
+
+  void revive() {
+    _reviveTimer?.cancel();
+    for (int y = 5; y < kGridSize; y++) {
+      for (int x = 0; x < kGridSize; x++) _grid[y][x] = null;
     }
+    _state = GameState.playing;
+    onStateChanged?.call(_state);
+    _audio.resumeMusic();
+  }
+
+  void skipRevive() {
+    _reviveTimer?.cancel();
+    _state = GameState.gameOver;
+    _audio.sfxLose();
+    _audio.stopMusic();
+    onStateChanged?.call(_state);
   }
 
   bool anyPieceFits() {
@@ -349,63 +382,8 @@ class BlockBlastGame extends FlameGame with PanDetector {
     return false;
   }
 
-  void restart() {
-    for (int y = 0; y < kGridSize; y++) {
-      for (int x = 0; x < kGridSize; x++) {
-        _grid[y][x] = null;
-      }
-    }
-    _score = 0;
-    _gameOver = false;
-    _paused = false;
-    _flashing.clear();
-    _tutorialActive = true;
-    _tutorialT = 0;
-    _comboMsg = null;
-    _comboBonus = null;
-    _comboT = 0;
-    refillTray();
-    onScoreChanged?.call(_score, _bestScore);
-    onGameOverChanged?.call(false);
-    onPausedChanged?.call(false);
-    _audio.startMusic();
-  }
-
-  String _comboMessageFor(int lines) {
-    switch (lines) {
-      case 1: return 'Good!';
-      case 2: return 'Great!';
-      case 3: return 'Amazing!';
-      case 4: return 'Awesome!';
-      default: return 'Combo x$lines!';
-    }
-  }
-
-  void togglePause() {
-    if (_gameOver) return;
-    _paused = !_paused;
-    onPausedChanged?.call(_paused);
-    if (_paused) {
-      _audio.pauseMusic();
-    } else {
-      _audio.resumeMusic();
-    }
-  }
-
-  void toggleMusic() {
-    _audio.toggleMusic();
-    onAudioTogglesChanged?.call(_audio.musicOn, _audio.sfxOn);
-  }
-
-  void toggleSfx() {
-    _audio.toggleSfx();
-    onAudioTogglesChanged?.call(_audio.musicOn, _audio.sfxOn);
-  }
-
-  // ---- Drag render info (used by _DragPreviewComponent) ----
   Piece? get draggedPiece => _drag?.piece;
   bool isDraggingSlot(int slotIdx) => _drag?.slotIdx == slotIdx;
-
   _Cell? getDragCell() {
     final d = _drag;
     if (d == null) return null;
@@ -414,37 +392,32 @@ class BlockBlastGame extends FlameGame with PanDetector {
     final cy = ((d.pos.y - _gridY) / _gridPx).floor() - (shape.length ~/ 2);
     return _Cell(cx, cy);
   }
-
   Vector2? get dragPos => _drag?.pos;
+  int? get comboCheerfulFrame => _comboCheerfulFrame;
+  int? get comboBonus => _comboBonus;
+  bool get tutorialActive => _tutorialActive;
 
   @override
   void update(double dt) {
     super.update(dt);
-    if (_flashing.isNotEmpty) {
-      _flashT += dt;
-    }
-    if (_tutorialActive) {
-      _tutorialT += dt;
-    }
-    if (_comboMsg != null) {
+    if (_flashing.isNotEmpty) _flashT += dt;
+    if (_tutorialActive) _tutorialT += dt;
+    if (_comboCheerfulFrame != null) {
       _comboT += dt;
       if (_comboT >= _comboDuration) {
-        _comboMsg = null;
+        _comboCheerfulFrame = null;
         _comboBonus = null;
       }
     }
   }
 }
 
-// =============================================================================
-// Data classes
-// =============================================================================
-
+// === Data classes ===
 class _Cell {
   final int x, y;
   const _Cell(this.x, this.y);
   @override
-  bool operator ==(Object other) => other is _Cell && other.x == x && other.y == y;
+  bool operator ==(Object o) => o is _Cell && o.x == x && o.y == y;
   @override
   int get hashCode => Object.hash(x, y);
 }
@@ -456,427 +429,588 @@ class _DragState {
   _DragState({required this.slotIdx, required this.piece, required this.pos});
 }
 
-// =============================================================================
-// Background — vertical gradient using Bg sprite (27x1920 strip)
-// =============================================================================
-
+// === Background ===
 class _BackgroundComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
   final SpriteCache sprites;
-  late final Sprite _bgSprite;
-
+  late Sprite _bg;
   _BackgroundComponent(this.sprites);
-
   @override
-  Future<void> onLoad() async {
-    _bgSprite = sprites.get('Bg');
-  }
-
+  Future<void> onLoad() async => _bg = sprites.get('Bg');
   @override
   void render(Canvas canvas) {
     final w = gameRef.size.x;
     final h = gameRef.size.y;
-    // Tile the Bg sprite horizontally — it's a 27px-wide strip.
-    // Stretch the strip to cover the screen width while preserving
-    // the vertical gradient.
-    final srcW = _bgSprite.srcSize.x;
-    final srcH = _bgSprite.srcSize.y;
-    // Scale the strip's height to match the screen height, then scale
-    // width by the same factor. If the resulting width < screen width,
-    // tile (but for a 27px strip scaled to 915px height, the scaled
-    // width is ~13px, so we need to tile ~30 times).
+    final srcW = _bg.srcSize.x;
+    final srcH = _bg.srcSize.y;
     final scaleY = h / srcH;
     final tileW = srcW * scaleY;
-    final tileH = h;
     int n = (w / tileW).ceil();
     for (int i = 0; i < n; i++) {
-      _bgSprite.render(
-        canvas,
-        position: Vector2(i * tileW, 0),
-        size: Vector2(tileW + 1, tileH),
-      );
+      _bg.render(canvas, position: Vector2(i * tileW, 0), size: Vector2(tileW + 1, h));
     }
   }
 }
 
-// =============================================================================
-// Board + grid cells
-// =============================================================================
+// === Score panel ===
+class _ScorePanelComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late Sprite _crown;
+  _ScorePanelComponent(this.game_, this.sprites);
+  @override
+  Future<void> onLoad() async => _crown = sprites.get('CupIcon');
+  @override
+  void render(Canvas canvas) {
+    if (gameRef.state == GameState.home) return;
+    final w = gameRef.size.x;
+    _crown.render(canvas, position: Vector2(16, 20), size: Vector2(44, 44));
+    final scoreTp = flutter.TextPainter(
+      text: flutter.TextSpan(text: '${gameRef.score}',
+        style: const flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 30, fontWeight: flutter.FontWeight.w800, letterSpacing: 1.0)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    scoreTp.paint(canvas, Offset((w - scoreTp.width) / 2, 24));
+    final bestTp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'BEST ${gameRef.bestScore}',
+        style: const flutter.TextStyle(color: flutter.Color(0xFFFAB82A), fontSize: 11, fontWeight: flutter.FontWeight.w600, letterSpacing: 0.8)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    bestTp.paint(canvas, Offset((w - bestTp.width) / 2, 58));
+  }
+}
 
+// === Board + grid ===
 class _BoardComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
   final BlockBlastGame game_;
   final SpriteCache sprites;
-  late final Sprite _boardSprite;
-  late final Sprite _blockShadowSprite;
-
+  late Sprite _board;
   _BoardComponent(this.game_, this.sprites);
-
   @override
-  Future<void> onLoad() async {
-    _boardSprite = sprites.get('Board');
-    _blockShadowSprite = sprites.get('BlockShadow');
-  }
-
+  Future<void> onLoad() async => _board = sprites.get('Board');
   @override
   void render(Canvas canvas) {
-    // 1. Draw the Board sprite (the grid panel background).
-    _boardSprite.render(
-      canvas,
-      position: Vector2(gameRef.boardX, gameRef.boardY),
-      size: Vector2(gameRef.boardPx, gameRef.boardPx),
-    );
-
-    // 2. Draw the 8x8 grid cells.
+    if (gameRef.state == GameState.home) return;
+    _board.render(canvas, position: Vector2(gameRef.boardX, gameRef.boardY), size: Vector2(gameRef.boardPx, gameRef.boardPx));
     final px = gameRef.gridPx;
-    final gx = gameRef.gridX;
-    final gy = gameRef.gridY;
     for (int y = 0; y < BlockBlastGame.kGridSize; y++) {
       for (int x = 0; x < BlockBlastGame.kGridSize; x++) {
-        final cx = gx + x * px;
-        final cy = gy + y * px;
+        final cx = gameRef.gridX + x * px;
+        final cy = gameRef.gridY + y * px;
         final colorIdx = gameRef.cellAt(x, y);
         final isFlashing = gameRef._flashing.contains(_Cell(x, y));
-
         if (colorIdx == null) {
-          // Empty cell: draw a subtle darker rect to indicate the grid.
-          final cellRect = Rect.fromLTWH(cx + 1, cy + 1, px - 2, px - 2);
-          final rrect = RRect.fromRectAndRadius(cellRect, const Radius.circular(4));
-          canvas.drawRRect(rrect, Paint()..color = const Color(0xFF1F2A4E));
+          final r = Rect.fromLTWH(cx + 1, cy + 1, px - 2, px - 2);
+          canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(4)), Paint()..color = const Color(0xFF1F2A4E));
         } else if (isFlashing) {
-          // Flash white during clear animation.
           final t = (gameRef._flashT / 0.32).clamp(0.0, 1.0);
           final flash = Color.lerp(const Color(0xFFFFFFFF), const Color(0xFF1F2A4E), t)!;
-          final cellRect = Rect.fromLTWH(cx, cy, px, px);
-          canvas.drawRect(cellRect, Paint()..color = flash);
+          canvas.drawRect(Rect.fromLTWH(cx, cy, px, px), Paint()..color = flash);
         } else {
-          // Filled cell: draw the Block sprite for this colorIdx.
-          final blockSprite = sprites.get('Block', frame: colorIdx);
-          blockSprite.render(
-            canvas,
-            position: Vector2(cx, cy),
-            size: Vector2(px, px),
-          );
+          sprites.get('Block', frame: colorIdx).render(canvas, position: Vector2(cx, cy), size: Vector2(px, px));
         }
       }
     }
   }
 }
 
-// =============================================================================
-// Tray (3 piece slots)
-// =============================================================================
-
+// === Tray ===
 class _TrayComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
   final BlockBlastGame game_;
   final SpriteCache sprites;
-
   _TrayComponent(this.game_, this.sprites);
-
   @override
   void render(Canvas canvas) {
+    if (gameRef.state == GameState.home) return;
     final gap = 8.0;
-    final slotPx = gameRef.traySlotPx;
-    final trayY = gameRef.trayY;
-    final trayX = gameRef.trayOriginX;
-
     for (int i = 0; i < BlockBlastGame.kTraySize; i++) {
-      final ox = trayX + i * (slotPx + gap);
-      final slotRect = Rect.fromLTWH(ox, trayY, slotPx, slotPx);
-      final slotRrect = RRect.fromRectAndRadius(slotRect, const Radius.circular(14));
-
-      // Slot background (rounded rect, semi-transparent dark)
-      canvas.drawRRect(slotRrect, Paint()
-        ..color = const Color(0x731F2A4E));
-      canvas.drawRRect(slotRrect, Paint()
+      final ox = gameRef.trayOriginX + i * (gameRef.traySlotPx + gap);
+      final r = Rect.fromLTWH(ox, gameRef.trayY, gameRef.traySlotPx, gameRef.traySlotPx);
+      final rr = RRect.fromRectAndRadius(r, const Radius.circular(14));
+      canvas.drawRRect(rr, Paint()..color = const Color(0x731F2A4E));
+      canvas.drawRRect(rr, Paint()
         ..color = const Color(0xFF3E559F).withOpacity(0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4);
-
       final piece = gameRef.traySnapshot[i];
       if (piece == null) continue;
-
       final isDragging = gameRef.isDraggingSlot(i);
-      final opacity = isDragging ? 0.25 : 1.0;
-
-      // Draw the piece's blocks centered in the slot.
-      _drawPieceInSlot(canvas, piece, ox, trayY, slotPx, opacity);
-    }
-  }
-
-  void _drawPieceInSlot(Canvas canvas, Piece piece, double ox, double oy, double slotPx, double opacity) {
-    final rows = piece.rows;
-    final cols = piece.cols;
-    // Each block in the tray is sized to fit the slot, with the piece
-    // centered. Block size = min((slotPx - 16) / max(rows, cols), ...)
-    final maxCellSize = (slotPx - 16) / max(rows, cols);
-    final pieceW = cols * maxCellSize;
-    final pieceH = rows * maxCellSize;
-    final startX = ox + (slotPx - pieceW) / 2;
-    final startY = oy + (slotPx - pieceH) / 2;
-
-    final blockSprite = sprites.get('Block', frame: piece.colorIdx);
-
-    // Save canvas state so we can apply opacity via a layer.
-    if (opacity < 1.0) {
-      canvas.saveLayer(Rect.fromLTWH(ox, oy, slotPx, slotPx), Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
-    }
-    for (int r = 0; r < rows; r++) {
-      for (int c = 0; c < cols; c++) {
-        if (piece.shape[r][c] == 0) continue;
-        final cellRect = Rect.fromLTWH(
-          startX + c * maxCellSize,
-          startY + r * maxCellSize,
-          maxCellSize,
-          maxCellSize,
-        );
-        blockSprite.render(
-          canvas,
-          position: Vector2(cellRect.left, cellRect.top),
-          size: Vector2(cellRect.width, cellRect.height),
-        );
+      final rows = piece.rows, cols = piece.cols;
+      final maxCell = (gameRef.traySlotPx - 16) / max(rows, cols);
+      final pw = cols * maxCell, ph = rows * maxCell;
+      final sx = ox + (gameRef.traySlotPx - pw) / 2;
+      final sy = gameRef.trayY + (gameRef.traySlotPx - ph) / 2;
+      final bs = sprites.get('Block', frame: piece.colorIdx);
+      if (isDragging) canvas.saveLayer(r, Paint()..color = const Color.fromRGBO(0, 0, 0, 0.25));
+      for (int r2 = 0; r2 < rows; r2++) {
+        for (int c2 = 0; c2 < cols; c2++) {
+          if (piece.shape[r2][c2] == 0) continue;
+          bs.render(canvas, position: Vector2(sx + c2 * maxCell, sy + r2 * maxCell), size: Vector2(maxCell, maxCell));
+        }
       }
-    }
-    if (opacity < 1.0) {
-      canvas.restore();
+      if (isDragging) canvas.restore();
     }
   }
 }
 
-// =============================================================================
-// Drag preview layer — floating piece under finger + ghost preview on grid
-// =============================================================================
-
+// === Drag preview ===
 class _DragPreviewComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
   final BlockBlastGame game_;
   final SpriteCache sprites;
-
   _DragPreviewComponent(this.game_, this.sprites);
-
   @override
   void render(Canvas canvas) {
     final piece = gameRef.draggedPiece;
     if (piece == null) return;
-
-    // 1. Draw ghost preview on the grid (the cells the piece would
-    //    occupy if dropped now).
-    final dragCell = gameRef.getDragCell();
-    if (dragCell != null) {
-      final fits = gameRef.pieceFits(piece, dragCell.x, dragCell.y);
-      final previewColor = fits
-          ? BlockPalette.blockColors[piece.colorIdx]
-          : const Color(0xFFC93131);
+    final dc = gameRef.getDragCell();
+    if (dc != null) {
+      final fits = gameRef.pieceFits(piece, dc.x, dc.y);
+      final pc = fits ? BlockPalette.blockColors[piece.colorIdx] : const Color(0xFFC93131);
       final px = gameRef.gridPx;
       for (int r = 0; r < piece.rows; r++) {
         for (int c = 0; c < piece.cols; c++) {
           if (piece.shape[r][c] == 0) continue;
-          final gx = dragCell.x + c;
-          final gy = dragCell.y + r;
+          final gx = dc.x + c, gy = dc.y + r;
           if (gx < 0 || gx >= BlockBlastGame.kGridSize || gy < 0 || gy >= BlockBlastGame.kGridSize) continue;
-          final cx = gameRef.gridX + gx * px;
-          final cy = gameRef.gridY + gy * px;
-          final cellRect = Rect.fromLTWH(cx, cy, px, px);
-          final cellRrect = RRect.fromRectAndRadius(cellRect, const Radius.circular(4));
-          canvas.drawRRect(cellRrect, Paint()
-            ..color = previewColor.withOpacity(0.30));
-          canvas.drawRRect(cellRrect, Paint()
-            ..color = previewColor.withOpacity(0.75)
+          final cx = gameRef.gridX + gx * px, cy = gameRef.gridY + gy * px;
+          final rr = RRect.fromRectAndRadius(Rect.fromLTWH(cx, cy, px, px), const Radius.circular(4));
+          canvas.drawRRect(rr, Paint()..color = pc.withOpacity(0.30));
+          canvas.drawRRect(rr, Paint()
+            ..color = pc.withOpacity(0.75)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2.0);
         }
       }
     }
-
-    // 2. Draw the floating piece under the finger.
     final pos = gameRef.dragPos;
     if (pos != null) {
-      final cellPx = gameRef.gridPx;
-      final pieceW = piece.cols * cellPx;
-      final pieceH = piece.rows * cellPx;
-      final startX = pos.x - pieceW / 2;
-      final startY = pos.y - pieceH / 2;
-      final blockSprite = sprites.get('Block', frame: piece.colorIdx);
+      final cp = gameRef.gridPx;
+      final pw = piece.cols * cp, ph = piece.rows * cp;
+      final sx = pos.x - pw / 2, sy = pos.y - ph / 2;
+      final bs = sprites.get('Block', frame: piece.colorIdx);
       for (int r = 0; r < piece.rows; r++) {
         for (int c = 0; c < piece.cols; c++) {
           if (piece.shape[r][c] == 0) continue;
-          blockSprite.render(
-            canvas,
-            position: Vector2(startX + c * cellPx, startY + r * cellPx),
-            size: Vector2(cellPx, cellPx),
-          );
+          bs.render(canvas, position: Vector2(sx + c * cp, sy + r * cp), size: Vector2(cp, cp));
         }
       }
     }
   }
 }
 
-// =============================================================================
-// Score panel — CupIcon (crown) + score number + best score at the top
-// =============================================================================
-
-class _ScorePanelComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
-  final BlockBlastGame game_;
-  final SpriteCache sprites;
-  late final Sprite _crownSprite;
-
-  _ScorePanelComponent(this.game_, this.sprites);
-
-  @override
-  Future<void> onLoad() async {
-    _crownSprite = sprites.get('CupIcon');
-  }
-
-  @override
-  void render(Canvas canvas) {
-    if (gameRef.isGameOver || gameRef.isPaused) return;
-
-    final w = gameRef.size.x;
-    final crownSize = 44.0;
-    final crownX = 16.0;
-    final crownY = 20.0;
-
-    // Draw the crown (CupIcon) on the left
-    _crownSprite.render(
-      canvas,
-      position: Vector2(crownX, crownY),
-      size: Vector2(crownSize, crownSize),
-    );
-
-    // Draw the score number in the center-top area (large, white)
-    final scoreText = '${gameRef.score}';
-    final scoreTp = flutter.TextPainter(
-      text: flutter.TextSpan(
-        text: scoreText,
-        style: const flutter.TextStyle(
-          color: flutter.Color(0xFFFFFFFF),
-          fontSize: 30,
-          fontWeight: flutter.FontWeight.w800,
-          letterSpacing: 1.0,
-        ),
-      ),
-      textDirection: flutter.TextDirection.ltr,
-    )..layout();
-
-    final scoreX = (w - scoreTp.width) / 2;
-    final scoreY = 24.0;
-    scoreTp.paint(canvas, Offset(scoreX, scoreY));
-
-    // Draw BEST score below the main score (small, muted gold)
-    final bestTp = flutter.TextPainter(
-      text: flutter.TextSpan(
-        text: 'BEST ${gameRef.bestScore}',
-        style: const flutter.TextStyle(
-          color: flutter.Color(0xFFFAB82A),
-          fontSize: 11,
-          fontWeight: flutter.FontWeight.w600,
-          letterSpacing: 0.8,
-        ),
-      ),
-      textDirection: flutter.TextDirection.ltr,
-    )..layout();
-    bestTp.paint(canvas, Offset((w - bestTp.width) / 2, scoreY + 34));
-  }
-}
-
-// =============================================================================
-// Tutorial hand — animates from tray slot 0 to grid center on first launch
-// =============================================================================
-
+// === Tutorial hand ===
 class _TutorialHandComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
   final BlockBlastGame game_;
   final SpriteCache sprites;
-  late final Sprite _handSprite;
-
+  late Sprite _hand;
   _TutorialHandComponent(this.game_, this.sprites);
-
   @override
-  Future<void> onLoad() async {
-    _handSprite = sprites.get('Hand');
-  }
-
+  Future<void> onLoad() async => _hand = sprites.get('Hand');
   @override
   void render(Canvas canvas) {
-    if (!gameRef._tutorialActive || gameRef.isGameOver || gameRef.isPaused) return;
-
+    if (!gameRef.tutorialActive || gameRef.state != GameState.playing) return;
     final t = gameRef._tutorialT;
     final cycle = (t % 2.0) / 2.0;
-    double progress;
-    if (cycle < 0.5) {
-      progress = cycle * 2;
-    } else {
-      progress = 2 - cycle * 2;
-    }
-    progress = progress.clamp(0.0, 1.0);
-
-    final startX = gameRef.trayOriginX + gameRef.traySlotPx / 2;
-    final startY = gameRef.trayY + gameRef.traySlotPx / 2;
-    final endX = gameRef.gridX + gameRef.gridPx * 4;
-    final endY = gameRef.gridY + gameRef.gridPx * 4;
-
-    final x = startX + (endX - startX) * progress;
-    final y = startY + (endY - startY) * progress;
-
-    final handW = 72.0;
-    final handH = 60.0;
-    _handSprite.render(
-      canvas,
-      position: Vector2(x - handW / 2, y - handH - 10),
-      size: Vector2(handW, handH),
-    );
+    double p = cycle < 0.5 ? cycle * 2 : 2 - cycle * 2;
+    p = p.clamp(0.0, 1.0);
+    final sx = gameRef.trayOriginX + gameRef.traySlotPx / 2;
+    final sy = gameRef.trayY + gameRef.traySlotPx / 2;
+    final ex = gameRef.gridX + gameRef.gridPx * 4;
+    final ey = gameRef.gridY + gameRef.gridPx * 4;
+    final x = sx + (ex - sx) * p, y = sy + (ey - sy) * p;
+    _hand.render(canvas, position: Vector2(x - 36, y - 70), size: Vector2(72, 60));
   }
 }
 
-// =============================================================================
-// Combo text — floating "Amazing!" / "Combo x2" / "+N" on line clears
-// =============================================================================
-
+// === Combo text (Cheerful sprite) ===
 class _ComboTextComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
   final BlockBlastGame game_;
-
-  _ComboTextComponent(this.game_);
-
+  final SpriteCache sprites;
+  _ComboTextComponent(this.game_, this.sprites);
   @override
   void render(Canvas canvas) {
-    final msg = gameRef._comboMsg;
-    if (msg == null) return;
-
+    final frame = gameRef.comboCheerfulFrame;
+    if (frame == null) return;
     final t = gameRef._comboT;
-    final duration = BlockBlastGame._comboDuration;
-    final floatUp = (t / duration).clamp(0.0, 1.0) * 40;
-    final opacity = t > duration - 0.5
-        ? (1.0 - (t - (duration - 0.5)) / 0.5).clamp(0.0, 1.0)
-        : 1.0;
-
+    final dur = BlockBlastGame._comboDuration;
+    final floatUp = (t / dur).clamp(0.0, 1.0) * 40;
+    final opacity = t > dur - 0.5 ? (1.0 - (t - (dur - 0.5)) / 0.5).clamp(0.0, 1.0) : 1.0;
     final w = gameRef.size.x;
-    final centerX = w / 2;
-    final centerY = gameRef.gridY + gameRef.gridPx * 3 - floatUp;
+    final cx = w / 2;
+    final cy = gameRef.gridY + gameRef.gridPx * 3 - floatUp;
 
-    final msgTp = flutter.TextPainter(
+    final sprite = sprites.get('Cheerful', frame: frame);
+    final srcSize = sprite.srcSize;
+    final maxW = w * 0.7;
+    final maxH = 140.0;
+    final scaleW = maxW / srcSize.x;
+    final scaleH = maxH / srcSize.y;
+    final scale = scaleW < scaleH ? scaleW : scaleH;
+    final drawW = srcSize.x * scale, drawH = srcSize.y * scale;
+
+    canvas.saveLayer(Rect.fromLTWH(0, cy - 20, w, drawH + 60), Paint()..color = Color.fromRGBO(255, 255, 255, opacity));
+    sprite.render(canvas, position: Vector2(cx - drawW / 2, cy), size: Vector2(drawW, drawH));
+    canvas.restore();
+
+    final bonus = gameRef.comboBonus;
+    if (bonus != null) {
+      final bp = flutter.TextPainter(
+        text: flutter.TextSpan(text: '+$bonus',
+          style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF).withOpacity(opacity), fontSize: 22, fontWeight: flutter.FontWeight.w700)),
+        textDirection: flutter.TextDirection.ltr,
+      )..layout();
+      bp.paint(canvas, Offset(cx - bp.width / 2, cy + drawH + 6));
+    }
+  }
+}
+
+// === Combo heart ===
+class _ComboHeartComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late Sprite _heart;
+  _ComboHeartComponent(this.game_, this.sprites);
+  @override
+  Future<void> onLoad() async => _heart = sprites.get('Heart');
+  @override
+  void render(Canvas canvas) {
+    final frame = gameRef.comboCheerfulFrame;
+    if (frame == null || frame < 3) return;
+    final t = gameRef._comboT;
+    final dur = BlockBlastGame._comboDuration;
+    final opacity = t > dur - 0.5 ? (1.0 - (t - (dur - 0.5)) / 0.5).clamp(0.0, 1.0) : 1.0;
+    final pulse = 1.0 + 0.1 * (0.5 + 0.5 * sin(t * 8));
+    final size = 50.0 * pulse;
+    canvas.saveLayer(Rect.fromLTWH(0, 0, gameRef.size.x, 100), Paint()..color = Color.fromRGBO(255, 255, 255, opacity));
+    _heart.render(canvas, position: Vector2(20, 18), size: Vector2(size, size));
+    canvas.restore();
+  }
+}
+
+// === Home screen ===
+class _HomeScreenComponent extends PositionComponent with HasGameRef<BlockBlastGame>, TapCallbacks {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late Sprite _btnPlay;
+  late Sprite _btnRanking;
+  late Rect _playRect;
+  late Rect _rankingRect;
+  _HomeScreenComponent(this.game_, this.sprites);
+  @override
+  Future<void> onLoad() async {
+    _btnPlay = sprites.get('BtnPlay');
+    _btnRanking = sprites.get('BtnShowRanking');
+  }
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    final w = size.x;
+    final playW = w * 0.6, playH = playW * (115.0 / 332);
+    _playRect = Rect.fromLTWH((w - playW) / 2, size.y * 0.55, playW, playH);
+    final rankW = w * 0.4, rankH = rankW * (115.0 / 332);
+    _rankingRect = Rect.fromLTWH((w - rankW) / 2, _playRect.bottom + 30, rankW, rankH);
+  }
+  @override
+  void render(Canvas canvas) {
+    if (!gameRef.isHome) return;
+    final w = gameRef.size.x;
+    final tp = flutter.TextPainter(
       text: flutter.TextSpan(
-        text: msg,
-        style: flutter.TextStyle(
-          color: const flutter.Color(0xFFFAB82A).withOpacity(opacity),
-          fontSize: 32,
-          fontWeight: flutter.FontWeight.w800,
-          letterSpacing: 1.2,
-        ),
+        children: [
+          flutter.TextSpan(text: 'BLOCK ', style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 42, fontWeight: flutter.FontWeight.w800, letterSpacing: 2.0)),
+          flutter.TextSpan(text: 'BLAST', style: flutter.TextStyle(color: flutter.Color(0xFFFAB82A), fontSize: 42, fontWeight: flutter.FontWeight.w800, letterSpacing: 2.0)),
+        ],
       ),
       textDirection: flutter.TextDirection.ltr,
     )..layout();
-    msgTp.paint(canvas, Offset(centerX - msgTp.width / 2, centerY));
+    tp.paint(canvas, Offset((w - tp.width) / 2, gameRef.size.y * 0.25));
 
-    final bonus = gameRef._comboBonus;
-    if (bonus != null) {
-      final bonusTp = flutter.TextPainter(
+    if (gameRef.bestScore > 0) {
+      final bp = flutter.TextPainter(
+        text: flutter.TextSpan(text: 'BEST: ${gameRef.bestScore}',
+          style: flutter.TextStyle(color: flutter.Color(0xFFFAB82A), fontSize: 18, fontWeight: flutter.FontWeight.w600, letterSpacing: 1.0)),
+        textDirection: flutter.TextDirection.ltr,
+      )..layout();
+      bp.paint(canvas, Offset((w - bp.width) / 2, gameRef.size.y * 0.25 + tp.height + 12));
+    }
+
+    _btnPlay.render(canvas, position: Vector2(_playRect.left, _playRect.top), size: Vector2(_playRect.width, _playRect.height));
+    _btnRanking.render(canvas, position: Vector2(_rankingRect.left, _rankingRect.top), size: Vector2(_rankingRect.width, _rankingRect.height));
+  }
+  @override
+  bool containsLocalPoint(Vector2 p) {
+    if (!gameRef.isHome) return false;
+    return _playRect.contains(p.toOffset()) || _rankingRect.contains(p.toOffset());
+  }
+  @override
+  void onTapDown(TapDownInfo info) {
+    if (!gameRef.isHome) return;
+    final p = info.eventPosition.global;
+    if (_playRect.contains(p.toOffset())) {
+      gameRef.startGame();
+    } else if (_rankingRect.contains(p.toOffset())) {
+      gameRef.openRanking();
+    }
+  }
+}
+
+// === Pause popup ===
+class _PausePopupComponent extends PositionComponent with HasGameRef<BlockBlastGame>, TapCallbacks {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late Sprite _popup;
+  late Rect _popupRect;
+  late Rect _homeRect, _resetRect, _rankingRect, _musicRect, _sfxRect;
+  _PausePopupComponent(this.game_, this.sprites);
+  @override
+  Future<void> onLoad() async => _popup = sprites.get('PausePopup');
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    final w = size.x;
+    final popW = w * 0.85;
+    final popH = popW * (1113.0 / 886);
+    _popupRect = Rect.fromLTWH((w - popW) / 2, (size.y - popH) / 2, popW, popH);
+    final btnSize = popW * 0.14;
+    final gap = (popW - btnSize * 5) / 6;
+    final btnY = _popupRect.bottom - btnSize - 30;
+    _homeRect = Rect.fromLTWH(_popupRect.left + gap, btnY, btnSize, btnSize);
+    _resetRect = Rect.fromLTWH(_homeRect.right + gap, btnY, btnSize, btnSize);
+    _rankingRect = Rect.fromLTWH(_resetRect.right + gap, btnY, btnSize, btnSize);
+    _musicRect = Rect.fromLTWH(_rankingRect.right + gap, btnY, btnSize, btnSize);
+    _sfxRect = Rect.fromLTWH(_musicRect.right + gap, btnY, btnSize, btnSize);
+  }
+  @override
+  void render(Canvas canvas) {
+    if (!gameRef.isPaused) return;
+    canvas.drawRect(Rect.fromLTWH(0, 0, gameRef.size.x, gameRef.size.y), Paint()..color = const Color(0xCC0A1119));
+    _popup.render(canvas, position: Vector2(_popupRect.left, _popupRect.top), size: Vector2(_popupRect.width, _popupRect.height));
+    final tp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'PAUSED',
+        style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 32, fontWeight: flutter.FontWeight.w800, letterSpacing: 2.0)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(_popupRect.center.dx - tp.width / 2, _popupRect.top + 60));
+    sprites.get('BtnHome').render(canvas, position: Vector2(_homeRect.left, _homeRect.top), size: Vector2(_homeRect.width, _homeRect.height));
+    sprites.get('BtnReset').render(canvas, position: Vector2(_resetRect.left, _resetRect.top), size: Vector2(_resetRect.width, _resetRect.height));
+    sprites.get('BtnShowRanking').render(canvas, position: Vector2(_rankingRect.left, _rankingRect.top), size: Vector2(_rankingRect.width, _rankingRect.height));
+    sprites.get('BtnMusic', frame: gameRef.musicOn ? 0 : 1).render(canvas, position: Vector2(_musicRect.left, _musicRect.top), size: Vector2(_musicRect.width, _musicRect.height));
+    sprites.get('BtnSFX', frame: gameRef.sfxOn ? 0 : 1).render(canvas, position: Vector2(_sfxRect.left, _sfxRect.top), size: Vector2(_sfxRect.width, _sfxRect.height));
+  }
+  @override
+  bool containsLocalPoint(Vector2 p) => gameRef.isPaused;
+  @override
+  void onTapDown(TapDownInfo info) {
+    if (!gameRef.isPaused) return;
+    final p = info.eventPosition.global;
+    if (_homeRect.contains(p.toOffset())) {
+      gameRef.goHome();
+    } else if (_resetRect.contains(p.toOffset())) {
+      gameRef.startGame();
+    } else if (_rankingRect.contains(p.toOffset())) {
+      gameRef.openRanking();
+    } else if (_musicRect.contains(p.toOffset())) {
+      gameRef.toggleMusic();
+    } else if (_sfxRect.contains(p.toOffset())) {
+      gameRef.toggleSfx();
+    } else if (!_popupRect.contains(p.toOffset())) {
+      gameRef.closePause();
+    }
+  }
+}
+
+// === Game Over ===
+class _GameOverComponent extends PositionComponent with HasGameRef<BlockBlastGame>, TapCallbacks {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late Sprite _banner;
+  late Rect _restartRect;
+  _GameOverComponent(this.game_, this.sprites);
+  @override
+  Future<void> onLoad() async => _banner = sprites.get('GameOver');
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    final w = size.x;
+    final bannerW = w * 0.7;
+    final bannerH = bannerW * (78.0 / 469);
+    final bannerY = size.y * 0.3;
+    _restartRect = Rect.fromLTWH((w - 200) / 2, bannerY + bannerH + 80, 200, 50);
+  }
+  @override
+  void render(Canvas canvas) {
+    if (!gameRef.isGameOver) return;
+    canvas.drawRect(Rect.fromLTWH(0, 0, gameRef.size.x, gameRef.size.y), Paint()..color = const Color(0xE60A1119));
+    final w = gameRef.size.x;
+    final bannerW = w * 0.7;
+    final bannerH = bannerW * (78.0 / 469);
+    final bannerY = gameRef.size.y * 0.3;
+    _banner.render(canvas, position: Vector2((w - bannerW) / 2, bannerY), size: Vector2(bannerW, bannerH));
+    final sp = flutter.TextPainter(
+      text: flutter.TextSpan(text: '${gameRef.score}',
+        style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 48, fontWeight: flutter.FontWeight.w800)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    sp.paint(canvas, Offset((w - sp.width) / 2, bannerY + bannerH + 20));
+    final bp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'BEST: ${gameRef.bestScore}',
+        style: flutter.TextStyle(color: flutter.Color(0xFFFAB82A), fontSize: 16, fontWeight: flutter.FontWeight.w600)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    bp.paint(canvas, Offset((w - bp.width) / 2, bannerY + bannerH + 80));
+    final rr = RRect.fromRectAndRadius(_restartRect, const Radius.circular(8));
+    canvas.drawRRect(rr, Paint()..color = const Color(0xFFFAB82A));
+    final tp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'PLAY AGAIN',
+        style: flutter.TextStyle(color: flutter.Color(0xFF0A1119), fontSize: 16, fontWeight: flutter.FontWeight.w800, letterSpacing: 1.0)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(_restartRect.center.dx - tp.width / 2, _restartRect.center.dy - tp.height / 2));
+    final hp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'or tap anywhere',
+        style: flutter.TextStyle(color: flutter.Color(0xFF6B7280), fontSize: 11)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    hp.paint(canvas, Offset((w - hp.width) / 2, _restartRect.bottom + 12));
+  }
+  @override
+  bool containsLocalPoint(Vector2 p) => gameRef.isGameOver;
+  @override
+  void onTapDown(TapDownInfo info) {
+    if (!gameRef.isGameOver) return;
+    gameRef.goHome();
+  }
+}
+
+// === Revive ===
+class _ReviveComponent extends PositionComponent with HasGameRef<BlockBlastGame>, TapCallbacks {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late Sprite _circle;
+  late Rect _reviveRect;
+  late Rect _skipRect;
+  _ReviveComponent(this.game_, this.sprites);
+  @override
+  Future<void> onLoad() async => _circle = sprites.get('ReviveCircle');
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    final w = size.x;
+    final circleSize = w * 0.5;
+    final circleY = size.y * 0.3;
+    _reviveRect = Rect.fromLTWH((w - 200) / 2, circleY + circleSize + 30, 200, 50);
+    _skipRect = Rect.fromLTWH((w - 100) / 2, _reviveRect.bottom + 12, 100, 30);
+  }
+  @override
+  void render(Canvas canvas) {
+    if (!gameRef.isRevive) return;
+    canvas.drawRect(Rect.fromLTWH(0, 0, gameRef.size.x, gameRef.size.y), Paint()..color = const Color(0xE60A1119));
+    final w = gameRef.size.x;
+    final circleSize = w * 0.5;
+    final circleY = gameRef.size.y * 0.3;
+    _circle.render(canvas, position: Vector2((w - circleSize) / 2, circleY), size: Vector2(circleSize, circleSize));
+    final num = gameRef.reviveTimeLeft.ceil();
+    final tp = flutter.TextPainter(
+      text: flutter.TextSpan(text: '$num',
+        style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 64, fontWeight: flutter.FontWeight.w800)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(w / 2 - tp.width / 2, circleY + circleSize / 2 - tp.height / 2));
+    final rr = RRect.fromRectAndRadius(_reviveRect, const Radius.circular(8));
+    canvas.drawRRect(rr, Paint()..color = const Color(0xFFFAB82A));
+    final rp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'REVIVE',
+        style: flutter.TextStyle(color: flutter.Color(0xFF0A1119), fontSize: 16, fontWeight: flutter.FontWeight.w800)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    rp.paint(canvas, Offset(_reviveRect.center.dx - rp.width / 2, _reviveRect.center.dy - rp.height / 2));
+    final sp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'Skip',
+        style: flutter.TextStyle(color: flutter.Color(0xFF6B7280), fontSize: 14, decoration: flutter.TextDecoration.underline)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    sp.paint(canvas, Offset(_skipRect.left, _skipRect.top));
+  }
+  @override
+  bool containsLocalPoint(Vector2 p) => gameRef.isRevive;
+  @override
+  void onTapDown(TapDownInfo info) {
+    if (!gameRef.isRevive) return;
+    final p = info.eventPosition.global;
+    if (_reviveRect.contains(p.toOffset())) {
+      gameRef.revive();
+    } else if (_skipRect.contains(p.toOffset())) {
+      gameRef.skipRevive();
+    }
+  }
+}
+
+// === Ranking popup ===
+class _RankingPopupComponent extends PositionComponent with HasGameRef<BlockBlastGame>, TapCallbacks {
+  final BlockBlastGame game_;
+  final SpriteCache sprites;
+  late Sprite _popup;
+  late Rect _popupRect;
+  late Rect _closeRect;
+  final List<Map<String, dynamic>> _ranking = [
+    {'name': 'Kara', 'score': 1720},
+    {'name': 'Philip', 'score': 1520},
+    {'name': 'Gianni', 'score': 1378},
+    {'name': 'Camila', 'score': 1240},
+    {'name': 'Logan', 'score': 580},
+  ];
+  _RankingPopupComponent(this.game_, this.sprites);
+  @override
+  Future<void> onLoad() async => _popup = sprites.get('PausePopup');
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    final w = size.x;
+    final popW = w * 0.85;
+    final popH = popW * (1113.0 / 886);
+    _popupRect = Rect.fromLTWH((w - popW) / 2, (size.y - popH) / 2, popW, popH);
+    _closeRect = Rect.fromLTWH(_popupRect.right - 50, _popupRect.top + 20, 40, 40);
+  }
+  @override
+  void render(Canvas canvas) {
+    if (!gameRef.isRanking) return;
+    canvas.drawRect(Rect.fromLTWH(0, 0, gameRef.size.x, gameRef.size.y), Paint()..color = const Color(0xCC0A1119));
+    _popup.render(canvas, position: Vector2(_popupRect.left, _popupRect.top), size: Vector2(_popupRect.width, _popupRect.height));
+    final tp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'RANKING',
+        style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 28, fontWeight: flutter.FontWeight.w800, letterSpacing: 1.5)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(_popupRect.center.dx - tp.width / 2, _popupRect.top + 50));
+    double y = _popupRect.top + 110;
+    for (int i = 0; i < _ranking.length; i++) {
+      final entry = _ranking[i];
+      final rp = flutter.TextPainter(
         text: flutter.TextSpan(
-          text: '+$bonus',
-          style: flutter.TextStyle(
-            color: const flutter.Color(0xFFFFFFFF).withOpacity(opacity),
-            fontSize: 22,
-            fontWeight: flutter.FontWeight.w700,
-          ),
+          children: [
+            flutter.TextSpan(text: '${i + 1}. ', style: flutter.TextStyle(color: flutter.Color(0xFFFAB82A), fontSize: 18, fontWeight: flutter.FontWeight.w700)),
+            flutter.TextSpan(text: entry['name'], style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 18, fontWeight: flutter.FontWeight.w600)),
+            flutter.TextSpan(text: '   ${entry['score']}', style: flutter.TextStyle(color: flutter.Color(0xFFE5E7EB), fontSize: 16)),
+          ],
         ),
         textDirection: flutter.TextDirection.ltr,
       )..layout();
-      bonusTp.paint(canvas, Offset(centerX - bonusTp.width / 2, centerY + 38));
+      rp.paint(canvas, Offset(_popupRect.left + 40, y));
+      y += 36;
+    }
+    final cp = flutter.TextPainter(
+      text: flutter.TextSpan(text: 'X', style: flutter.TextStyle(color: flutter.Color(0xFFFFFFFF), fontSize: 24)),
+      textDirection: flutter.TextDirection.ltr,
+    )..layout();
+    cp.paint(canvas, Offset(_closeRect.left + 8, _closeRect.top + 4));
+  }
+  @override
+  bool containsLocalPoint(Vector2 p) => gameRef.isRanking;
+  @override
+  void onTapDown(TapDownInfo info) {
+    if (!gameRef.isRanking) return;
+    final p = info.eventPosition.global;
+    if (_closeRect.contains(p.toOffset()) || !_popupRect.contains(p.toOffset())) {
+      gameRef.closeRanking();
     }
   }
 }
