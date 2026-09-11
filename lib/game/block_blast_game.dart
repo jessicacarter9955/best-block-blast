@@ -55,7 +55,7 @@ class BlockBlastGame extends FlameGame with PanDetector {
 
   // Revive state
   double _reviveTimeLeft = 5.0;
-  Timer? _reviveTimer;
+  dart:async.Timer? _reviveTimer;
 
   // Callbacks
   void Function(int score, int best)? onScoreChanged;
@@ -340,7 +340,7 @@ class BlockBlastGame extends FlameGame with PanDetector {
     _reviveTimeLeft = 5.0;
     onStateChanged?.call(_state);
     _reviveTimer?.cancel();
-    _reviveTimer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+    _reviveTimer = dart:async.Timer.periodic(const Duration(milliseconds: 100), (t) {
       _reviveTimeLeft -= 0.1;
       if (_reviveTimeLeft <= 0) {
         t.cancel();
@@ -742,7 +742,7 @@ class _HomeScreenComponent extends PositionComponent with HasGameRef<BlockBlastG
     return _playRect.contains(p.toOffset()) || _rankingRect.contains(p.toOffset());
   }
   @override
-  void onTapDown(TapDownInfo info) {
+  void onTapDown(TapDownEvent info) {
     if (!gameRef.isHome) return;
     final p = info.eventPosition.global;
     if (_playRect.contains(p.toOffset())) {
@@ -799,7 +799,7 @@ class _PausePopupComponent extends PositionComponent with HasGameRef<BlockBlastG
   @override
   bool containsLocalPoint(Vector2 p) => gameRef.isPaused;
   @override
-  void onTapDown(TapDownInfo info) {
+  void onTapDown(TapDownEvent info) {
     if (!gameRef.isPaused) return;
     final p = info.eventPosition.global;
     if (_homeRect.contains(p.toOffset())) {
@@ -875,7 +875,7 @@ class _GameOverComponent extends PositionComponent with HasGameRef<BlockBlastGam
   @override
   bool containsLocalPoint(Vector2 p) => gameRef.isGameOver;
   @override
-  void onTapDown(TapDownInfo info) {
+  void onTapDown(TapDownEvent info) {
     if (!gameRef.isGameOver) return;
     gameRef.goHome();
   }
@@ -933,7 +933,7 @@ class _ReviveComponent extends PositionComponent with HasGameRef<BlockBlastGame>
   @override
   bool containsLocalPoint(Vector2 p) => gameRef.isRevive;
   @override
-  void onTapDown(TapDownInfo info) {
+  void onTapDown(TapDownEvent info) {
     if (!gameRef.isRevive) return;
     final p = info.eventPosition.global;
     if (_reviveRect.contains(p.toOffset())) {
@@ -1006,7 +1006,7 @@ class _RankingPopupComponent extends PositionComponent with HasGameRef<BlockBlas
   @override
   bool containsLocalPoint(Vector2 p) => gameRef.isRanking;
   @override
-  void onTapDown(TapDownInfo info) {
+  void onTapDown(TapDownEvent info) {
     if (!gameRef.isRanking) return;
     final p = info.eventPosition.global;
     if (_closeRect.contains(p.toOffset()) || !_popupRect.contains(p.toOffset())) {
