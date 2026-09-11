@@ -744,7 +744,7 @@ class _HomeScreenComponent extends PositionComponent with HasGameRef<BlockBlastG
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isHome) return;
-    final p = info.globalPosition;
+    final p = info.localPosition;
     if (_playRect.contains(p.toOffset())) {
       gameRef.startGame();
     } else if (_rankingRect.contains(p.toOffset())) {
@@ -801,7 +801,7 @@ class _PausePopupComponent extends PositionComponent with HasGameRef<BlockBlastG
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isPaused) return;
-    final p = info.globalPosition;
+    final p = info.localPosition;
     if (_homeRect.contains(p.toOffset())) {
       gameRef.goHome();
     } else if (_resetRect.contains(p.toOffset())) {
@@ -935,7 +935,7 @@ class _ReviveComponent extends PositionComponent with HasGameRef<BlockBlastGame>
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isRevive) return;
-    final p = info.globalPosition;
+    final p = info.localPosition;
     if (_reviveRect.contains(p.toOffset())) {
       gameRef.revive();
     } else if (_skipRect.contains(p.toOffset())) {
@@ -1008,7 +1008,7 @@ class _RankingPopupComponent extends PositionComponent with HasGameRef<BlockBlas
   @override
   void onTapDown(TapDownEvent info) {
     if (!gameRef.isRanking) return;
-    final p = info.globalPosition;
+    final p = info.localPosition;
     if (_closeRect.contains(p.toOffset()) || !_popupRect.contains(p.toOffset())) {
       gameRef.closeRanking();
     }
