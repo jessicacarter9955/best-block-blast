@@ -432,21 +432,30 @@ class _DragState {
 // === Background ===
 class _BackgroundComponent extends PositionComponent with HasGameRef<BlockBlastGame> {
   final SpriteCache sprites;
-  late Sprite _bg;
+  Sprite? _bg;
   _BackgroundComponent(this.sprites);
   @override
-  Future<void> onLoad() async => _bg = sprites.get('Bg');
+  Future<void> onLoad() async {
+    try {
+      _bg = sprites.get('Bg');
+    } catch (_) {
+      _bg = null;
+    }
+  }
   @override
   void render(Canvas canvas) {
     final w = gameRef.size.x;
     final h = gameRef.size.y;
-    final srcW = _bg.srcSize.x;
-    final srcH = _bg.srcSize.y;
+    // Always paint a solid background first so we never get pitch black
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = const Color(0xFF4259A5));
+    if (_bg == null) return;
+    final srcW = _bg!.srcSize.x;
+    final srcH = _bg!.srcSize.y;
     final scaleY = h / srcH;
     final tileW = srcW * scaleY;
     int n = (w / tileW).ceil();
     for (int i = 0; i < n; i++) {
-      _bg.render(canvas, position: Vector2(i * tileW, 0), size: Vector2(tileW + 1, h));
+      _bg!.render(canvas, position: Vector2(i * tileW, 0), size: Vector2(tileW + 1, h));
     }
   }
 }

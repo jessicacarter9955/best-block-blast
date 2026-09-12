@@ -1,5 +1,27 @@
 [
   {
+    "object": "Bg",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 27,
+    "src_h": 1920,
+    "file": "assets/sprites-named/Bg-f00.png"
+  },
+  {
+    "object": "BlackBg",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 250,
+    "src_h": 250,
+    "file": "assets/sprites-named/BlackBg-f00.png"
+  },
+  {
     "object": "Block",
     "animation": "Animation 1",
     "frame": 0,
@@ -528,6 +550,17 @@
     "file": "assets/sprites-named/GameOver-f00.png"
   },
   {
+    "object": "GlowEffect",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 272,
+    "src_h": 172,
+    "file": "assets/sprites-named/GlowEffect-f00.png"
+  },
+  {
     "object": "Hand",
     "animation": "Animation 1",
     "frame": 0,
@@ -570,6 +603,50 @@
     "src_w": 737,
     "src_h": 107,
     "file": "assets/sprites-named/ItemBg-f01.png"
+  },
+  {
+    "object": "LeaderboardPopup2",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 493,
+    "src_h": 502,
+    "file": "assets/sprites-named/LeaderboardPopup2-f00.png"
+  },
+  {
+    "object": "LightBlueBg",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 10,
+    "src_h": 1000,
+    "file": "assets/sprites-named/LightBlueBg-f00.png"
+  },
+  {
+    "object": "LineEffect",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 200,
+    "src_h": 100,
+    "file": "assets/sprites-named/LineEffect-f00.png"
+  },
+  {
+    "object": "Particles",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 80,
+    "src_h": 80,
+    "file": "assets/sprites-named/Particles-f00.png"
   },
   {
     "object": "PausePopup",
@@ -625,5 +702,82 @@
     "src_w": 54,
     "src_h": 54,
     "file": "assets/sprites-named/SquareEffect-f00.png"
+  },
+  {
+    "object": "txtBestScore",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 1024,
+    "src_h": 128,
+    "file": "assets/sprites-named/txtBestScore-f00.png"
+  },
+  {
+    "object": "txtComboNum",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 700,
+    "src_h": 400,
+    "file": "assets/sprites-named/txtComboNum-f00.png"
+  },
+  {
+    "object": "txtEarnedScore",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 128,
+    "src_h": 512,
+    "file": "assets/sprites-named/txtEarnedScore-f00.png"
+  },
+  {
+    "object": "txtGOBestScore",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 1024,
+    "src_h": 128,
+    "file": "assets/sprites-named/txtGOBestScore-f00.png"
+  },
+  {
+    "object": "txtGOScore",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 1024,
+    "src_h": 128,
+    "file": "assets/sprites-named/txtGOScore-f00.png"
+  },
+  {
+    "object": "txtReviveTimer",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 1024,
+    "src_h": 128,
+    "file": "assets/sprites-named/txtReviveTimer-f00.png"
+  },
+  {
+    "object": "txtScore",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 1024,
+    "src_h": 128,
+    "file": "assets/sprites-named/txtScore-f00.png"
   }
 ]
