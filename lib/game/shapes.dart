@@ -1,5 +1,5 @@
-/// Piece shapes for Block Blast — 37 shapes total, ported from the
-/// original game's shapes.json.
+// Piece shapes for Block Blast — 37 shapes total, ported from the
+// original game's shapes.json.
 
 const List<List<List<int>>> kShapes = [
   [[1]],

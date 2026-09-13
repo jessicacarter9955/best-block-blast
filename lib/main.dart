@@ -14,11 +14,11 @@ class ChocoBlockApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ChocoBlock',
+      title: 'Block Blast',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: BlockPalette.blockColors[1],
+          seedColor: BlockPalette.blockColors[3],
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
@@ -36,23 +36,12 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  late final BlockBlastGame _game;
-
-  @override
-  void initState() {
-    super.initState();
-    _game = BlockBlastGame();
-  }
-
-  @override
-  void dispose() {
-    _game.dispose();
-    super.dispose();
-  }
+  final BlockBlastGame _game = BlockBlastGame();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Letterbox fill matching the original background gradient tone.
       backgroundColor: BlockPalette.bg,
       body: SafeArea(
         top: false,

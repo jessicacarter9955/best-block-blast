@@ -231,50 +231,6 @@
     "file": "assets/sprites-named/BtnClose-f00.png"
   },
   {
-    "object": "BtnGOReset",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 336,
-    "src_h": 119,
-    "file": "assets/sprites-named/BtnGOReset-f00.png"
-  },
-  {
-    "object": "BtnHome",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 286,
-    "src_h": 119,
-    "file": "assets/sprites-named/BtnHome-f00.png"
-  },
-  {
-    "object": "BtnMusic",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 116,
-    "src_h": 104,
-    "file": "assets/sprites-named/BtnMusic-f00.png"
-  },
-  {
-    "object": "BtnMusic",
-    "animation": "Animation 1",
-    "frame": 1,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 116,
-    "src_h": 104,
-    "file": "assets/sprites-named/BtnMusic-f01.png"
-  },
-  {
     "object": "BtnMusic2",
     "animation": "Animation 1",
     "frame": 0,
@@ -341,39 +297,6 @@
     "file": "assets/sprites-named/BtnReset-f00.png"
   },
   {
-    "object": "BtnRevive",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 336,
-    "src_h": 119,
-    "file": "assets/sprites-named/BtnRevive-f00.png"
-  },
-  {
-    "object": "BtnSFX",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 116,
-    "src_h": 104,
-    "file": "assets/sprites-named/BtnSFX-f00.png"
-  },
-  {
-    "object": "BtnSFX",
-    "animation": "Animation 1",
-    "frame": 1,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 116,
-    "src_h": 104,
-    "file": "assets/sprites-named/BtnSFX-f01.png"
-  },
-  {
     "object": "BtnSFX2",
     "animation": "Animation 1",
     "frame": 0,
@@ -394,94 +317,6 @@
     "src_w": 136,
     "src_h": 136,
     "file": "assets/sprites-named/BtnSFX2-f01.png"
-  },
-  {
-    "object": "BtnShowRanking",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 284,
-    "src_h": 118,
-    "file": "assets/sprites-named/BtnShowRanking-f00.png"
-  },
-  {
-    "object": "Cheerful",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 54,
-    "src_h": 54,
-    "file": "assets/sprites-named/Cheerful-f00.png"
-  },
-  {
-    "object": "Cheerful",
-    "animation": "Animation 1",
-    "frame": 1,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 54,
-    "src_h": 54,
-    "file": "assets/sprites-named/Cheerful-f01.png"
-  },
-  {
-    "object": "Cheerful",
-    "animation": "Animation 1",
-    "frame": 2,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 406,
-    "src_h": 117,
-    "file": "assets/sprites-named/Cheerful-f02.png"
-  },
-  {
-    "object": "Cheerful",
-    "animation": "Animation 1",
-    "frame": 3,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 612,
-    "src_h": 146,
-    "file": "assets/sprites-named/Cheerful-f03.png"
-  },
-  {
-    "object": "Cheerful",
-    "animation": "Animation 1",
-    "frame": 4,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 380,
-    "src_h": 119,
-    "file": "assets/sprites-named/Cheerful-f04.png"
-  },
-  {
-    "object": "Cheerful",
-    "animation": "Animation 1",
-    "frame": 5,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 607,
-    "src_h": 118,
-    "file": "assets/sprites-named/Cheerful-f05.png"
-  },
-  {
-    "object": "Cheerful",
-    "animation": "Animation 1",
-    "frame": 6,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 666,
-    "src_h": 117,
-    "file": "assets/sprites-named/Cheerful-f06.png"
   },
   {
     "object": "CircleGlow",
@@ -537,17 +372,6 @@
     "src_w": 329,
     "src_h": 171,
     "file": "assets/sprites-named/EarnedScoreGlow-f00.png"
-  },
-  {
-    "object": "GameOver",
-    "animation": "Animation 1",
-    "frame": 0,
-    "sheet": "extracted",
-    "src_x": 0,
-    "src_y": 0,
-    "src_w": 233,
-    "src_h": 82,
-    "file": "assets/sprites-named/GameOver-f00.png"
   },
   {
     "object": "GlowEffect",
@@ -779,5 +603,247 @@
     "src_w": 1024,
     "src_h": 128,
     "file": "assets/sprites-named/txtScore-f00.png"
+  },
+  {
+    "object": "Sprite2",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 841,
+    "src_h": 892,
+    "file": "assets/sprites-named/Sprite2-f00.png"
+  },
+  {
+    "object": "BtnGOReset",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 332,
+    "src_h": 115,
+    "file": "assets/sprites-named/BtnGOReset-f00.png"
+  },
+  {
+    "object": "BtnHome",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 282,
+    "src_h": 115,
+    "file": "assets/sprites-named/BtnHome-f00.png"
+  },
+  {
+    "object": "BtnMusic",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 210,
+    "src_h": 100,
+    "file": "assets/sprites-named/BtnMusic-f00.png"
+  },
+  {
+    "object": "BtnMusic",
+    "animation": "Animation 1",
+    "frame": 1,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 210,
+    "src_h": 100,
+    "file": "assets/sprites-named/BtnMusic-f01.png"
+  },
+  {
+    "object": "BtnRevive",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 332,
+    "src_h": 115,
+    "file": "assets/sprites-named/BtnRevive-f00.png"
+  },
+  {
+    "object": "BtnSFX",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 210,
+    "src_h": 100,
+    "file": "assets/sprites-named/BtnSFX-f00.png"
+  },
+  {
+    "object": "BtnSFX",
+    "animation": "Animation 1",
+    "frame": 1,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 210,
+    "src_h": 100,
+    "file": "assets/sprites-named/BtnSFX-f01.png"
+  },
+  {
+    "object": "BtnShowRanking",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 280,
+    "src_h": 114,
+    "file": "assets/sprites-named/BtnShowRanking-f00.png"
+  },
+  {
+    "object": "Cheerful",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 50,
+    "src_h": 50,
+    "file": "assets/sprites-named/Cheerful-f00.png"
+  },
+  {
+    "object": "Cheerful",
+    "animation": "Animation 1",
+    "frame": 1,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 50,
+    "src_h": 50,
+    "file": "assets/sprites-named/Cheerful-f01.png"
+  },
+  {
+    "object": "Cheerful",
+    "animation": "Animation 1",
+    "frame": 2,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 402,
+    "src_h": 113,
+    "file": "assets/sprites-named/Cheerful-f02.png"
+  },
+  {
+    "object": "Cheerful",
+    "animation": "Animation 1",
+    "frame": 3,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 608,
+    "src_h": 142,
+    "file": "assets/sprites-named/Cheerful-f03.png"
+  },
+  {
+    "object": "Cheerful",
+    "animation": "Animation 1",
+    "frame": 4,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 480,
+    "src_h": 115,
+    "file": "assets/sprites-named/Cheerful-f04.png"
+  },
+  {
+    "object": "Cheerful",
+    "animation": "Animation 1",
+    "frame": 5,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 603,
+    "src_h": 114,
+    "file": "assets/sprites-named/Cheerful-f05.png"
+  },
+  {
+    "object": "Cheerful",
+    "animation": "Animation 1",
+    "frame": 6,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 662,
+    "src_h": 113,
+    "file": "assets/sprites-named/Cheerful-f06.png"
+  },
+  {
+    "object": "NoSpaceLeft",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 609,
+    "src_h": 180,
+    "file": "assets/sprites-named/NoSpaceLeft-f00.png"
+  },
+  {
+    "object": "GameOver",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 469,
+    "src_h": 78,
+    "file": "assets/sprites-named/GameOver-f00.png"
+  },
+  {
+    "object": "TLabel",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 146,
+    "src_h": 45,
+    "file": "assets/sprites-named/TLabel-f00.png"
+  },
+  {
+    "object": "TLabel",
+    "animation": "Animation 1",
+    "frame": 1,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 262,
+    "src_h": 45,
+    "file": "assets/sprites-named/TLabel-f01.png"
+  },
+  {
+    "object": "PlaceHolder",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 250,
+    "src_h": 250,
+    "file": "assets/sprites-named/PlaceHolder-f00.png"
+  },
+  {
+    "object": "ComboSprite",
+    "animation": "Animation 1",
+    "frame": 0,
+    "sheet": "extracted",
+    "src_x": 0,
+    "src_y": 0,
+    "src_w": 463,
+    "src_h": 154,
+    "file": "assets/sprites-named/ComboSprite-f00.png"
   }
 ]

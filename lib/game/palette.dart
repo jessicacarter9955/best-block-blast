@@ -1,35 +1,33 @@
-import 'dart:math';
-import 'dart:ui' as ui;
-import 'dart:ui' show Canvas, Color, Offset, Paint, PaintingStyle, RRect, Radius, Rect, Image;
+import 'dart:ui';
 
-/// Chocolate palette for Block Blast — used for cell highlight previews
-/// and Flutter overlay colors. The actual block rendering uses the
-/// original Block sprite frames (already recolored to this palette
-/// via the recolor_blocks.py script).
+/// Original Block Blast colors — sampled directly from the original
+/// block-sheet0.png frames (the repo now ships the ORIGINAL sprites,
+/// restored from the game's CDN).
+///
+/// Frame order (matches data.json Block animation frames):
+///   0 lavender, 1 cyan, 2 green, 3 blue,
+///   4 yellow, 5 orange, 6 red, 7 pink
 class BlockPalette {
   BlockPalette._();
 
-  static const Color bg          = Color(0xFF0A1119);
-  static const Color gridCell    = Color(0xFF1F2A4E);
-  static const Color gridBorder  = Color(0xFF3E559F);
-  static const Color text        = Color(0xFFE5E7EB);
-  static const Color textMuted   = Color(0xFF6B7280);
-
-  // 8 block frame indices in the Block sprite. The recolored
-  // block-sheet0.png already maps them to: gold, brown, green, sky,
-  // cream, purple, sky (reused), purple (reused).
   static const int kBlockVariants = 8;
 
-  // Approximate base color for each frame — used for the preview
-  // overlay when dragging a piece (semi-transparent fill on cells).
+  /// Base color of each Block sprite frame (used for the drag-preview tint,
+  /// line-clear effect colors and square particles).
   static const List<Color> blockColors = [
-    Color(0xFFBF7ECA), // frame 0 — purple
-    Color(0xFF9B5738), // frame 1 — brown
-    Color(0xFFFAB82A), // frame 2 — gold
-    Color(0xFFF2E8BD), // frame 3 — cream
-    Color(0xFFCCE8FA), // frame 4 — sky
-    Color(0xFF699627), // frame 5 — green
-    Color(0xFFCCE8FA), // frame 6 — sky (reused)
-    Color(0xFFBF7ECA), // frame 7 — purple (reused)
+    Color(0xFF8D5FD7), // frame 0 — lavender  (139, 95, 215)
+    Color(0xFF36B2E1), // frame 1 — cyan      (54, 178, 225)
+    Color(0xFF3BB43B), // frame 2 — green     (59, 180, 59)
+    Color(0xFF4864E7), // frame 3 — blue      (72, 100, 231)
+    Color(0xFFEDB632), // frame 4 — yellow    (237, 182, 50)
+    Color(0xFFED7821), // frame 5 — orange    (237, 120, 33)
+    Color(0xFFC93131), // frame 6 — red       (201, 49, 49)
+    Color(0xFFD35FD7), // frame 7 — pink      (211, 95, 215)
   ];
+
+  // Screen chrome colors (from the original layout).
+  static const Color bg = Color(0xFF1E3580); // letterbox fill (gradient bottom tone)
+  static const Color gridCell = Color(0xFF212C52); // empty spot tone (33,44,82)
+  static const Color text = Color(0xFFFFFFFF);
+  static const Color textMuted = Color(0xFF6B7280);
 }

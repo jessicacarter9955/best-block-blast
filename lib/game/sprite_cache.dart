@@ -1,9 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flame/components.dart';
-import 'package:flame/extensions.dart';
-import 'package:flame/image_composition.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'sprite_manifest.dart';

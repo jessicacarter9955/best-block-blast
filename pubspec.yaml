@@ -1,7 +1,8 @@
 name: chocoblock
-description: Native Flutter port of Block Blast (chocolate palette) using the Flame engine and the original Construct 3 sprite assets.
+description: Native Flutter port of Block Blast — 1:1 with the original
+  Construct 3 game (original sprites, geometry, scoring, tutorial and flows).
 publish_to: "none"
-version: 0.2.0+3
+version: 1.0.0+4
 
 environment:
   sdk: ^3.5.0
@@ -10,9 +11,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flame: ^1.20.0
+  flame: 1.20.0
   flame_audio: ^2.10.0
   audioplayers: ^6.1.0
+  shared_preferences: ^2.3.2
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
@@ -26,3 +28,4 @@ flutter:
     - assets/audio/cheerful/
     - assets/sprites-named/
     # manifest.json is in the same folder, listed above
+    - assets/data/ranking.json
