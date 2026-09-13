@@ -548,12 +548,15 @@ class BlockBlastGame extends FlameGame {
         pos: Design.gridOriginY + y * Design.bigSize,
         color: color,
       ));
-      _spawnSquareEffects(
-        Design.boardX,
-        Design.gridOriginY + y * Design.bigSize,
-        horizontal: true,
-        color: color,
-      );
+      // Original: the squares spawn after Wait(0.2).
+      after(0.2, () {
+        _spawnSquareEffects(
+          Design.boardX,
+          Design.gridOriginY + y * Design.bigSize,
+          horizontal: true,
+          color: color,
+        );
+      });
     } else {
       final x = int.parse(line.substring(1));
       for (var y = 0; y < Design.gridSize; y++) {
@@ -564,38 +567,46 @@ class BlockBlastGame extends FlameGame {
         pos: Design.gridOriginX + x * Design.bigSize,
         color: color,
       ));
-      _spawnSquareEffects(
-        Design.gridOriginX + x * Design.bigSize,
-        Design.boardY,
-        horizontal: false,
-        color: color,
-      );
+      // Original: the squares spawn after Wait(0.2).
+      after(0.2, () {
+        _spawnSquareEffects(
+          Design.gridOriginX + x * Design.bigSize,
+          Design.boardY,
+          horizontal: false,
+          color: color,
+        );
+      });
     }
   }
 
   void _spawnSquareEffects(double x, double y,
       {required bool horizontal, required RgbColor color}) {
+    // Original: For loopindex 1..10 (vSquareCount/2), TWO CreateSquareEffect
+    // calls per iteration (one per direction along the line axis):
+    //   spawn offset along the axis = (loopindex - 1) * 50
+    //   perpendicular jitter        = random(-50, 50)
+    //   displacement                = +/-220 along the axis, 0 perpendicular
+    //   size                        = int(random(20, 50))
+    //   movement duration           = random(1.5, 2.2) * 1.5  (linear)
+    //   opacity                     = 100 -> 0 over 1s, destroy at end.
+    // The 0.2s delay before spawning is applied by the caller (after(0.2,..)).
     for (var i = 1; i <= 10; i++) {
-      final spread = rng.nextDouble() * 100 - 50;
-      final dist = 220 * (i / 10.0);
-      final size = 20 + rng.nextDouble() * 30;
-      final dur = (1.5 + rng.nextDouble() * 2.2) * 1.5;
-      final dx = horizontal ? dist : spread;
-      final dy = horizontal ? spread : dist;
-      squares.add(SquareFx(
-        x + dx,
-        y + dy,
-        size,
-        color,
-        dur,
-      ));
-      squares.add(SquareFx(
-        x - dx,
-        y - dy,
-        size,
-        color,
-        dur,
-      ));
+      final along = (i - 1) * 50.0;
+      final j1 = rng.nextDouble() * 100 - 50;
+      final j2 = rng.nextDouble() * 100 - 50;
+      final s1 = 20 + rng.nextDouble() * 30;
+      final s2 = 20 + rng.nextDouble() * 30;
+      final d1 = (1.5 + rng.nextDouble() * 0.7) * 1.5;
+      final d2 = (1.5 + rng.nextDouble() * 0.7) * 1.5;
+      if (horizontal) {
+        // Original "X" branch: fly +/-X, Y jitter.
+        squares.add(SquareFx(x + along, y + j1, 220, 0, s1, color, d1));
+        squares.add(SquareFx(x - along, y + j2, -220, 0, s2, color, d2));
+      } else {
+        // Original "Y" branch: fly +/-Y, X jitter.
+        squares.add(SquareFx(x + j1, y + along, 0, 220, s1, color, d1));
+        squares.add(SquareFx(x - j2, y - along, 0, -220, s2, color, d2));
+      }
     }
   }
 
@@ -863,7 +874,9 @@ class BlockBlastGame extends FlameGame {
     for (final s in squares) {
       s.t += dt;
     }
-    squares.removeWhere((s) => s.t >= s.dur);
+    // Original: the 1s opacity tween carries the destroy flag, so the
+    // particle is removed at 1s even though the movement tween is longer.
+    squares.removeWhere((s) => s.t >= 1.0);
     for (final g in glowBursts) {
       g.t += dt;
     }
@@ -1128,13 +1141,21 @@ class LineFx {
 }
 
 class SquareFx {
-  SquareFx(this.x, this.y, this.size, this.color, this.dur);
+  /// 1:1 with the original CreateSquareEffect:
+  /// - spawns at (x, y), tween-position to (x + vx, y + vy) over [dur]
+  ///   with LINEAR easing (vx/vy are the full ±220 / 0 displacements);
+  /// - opacity tween 100 -> 0 over 1s with destroy-on-finish, so the
+  ///   particle is gone at t = 1 regardless of the longer movement tween;
+  /// - size stays fixed (the original has no size tween).
+  SquareFx(this.x, this.y, this.vx, this.vy, this.size, this.color, this.dur);
   final double x;
   final double y;
+  final double vx;
+  final double vy;
   final double size;
   final RgbColor color;
   final double dur;
-  double t = 0;
+  double t = 0; // age in seconds; destroyed at 1.0
 }
 
 class GlowBurst {

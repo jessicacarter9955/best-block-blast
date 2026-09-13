@@ -127,17 +127,19 @@ extension GameRendering on BlockBlastGame {
       _drawLineEffect(canvas, fx);
     }
 
-    // Square particles.
+    // Square particles — 1:1 with the original CreateSquareEffect:
+    // linear movement from the spawn point toward (spawn + v) over [dur],
+    // opacity 100 -> 0 over exactly 1s (destroy at 1s), fixed size.
     final squarePaint = Paint();
     for (final s in squares) {
-      final alpha = (1 - s.t / s.dur).clamp(0.0, 1.0);
-      final side = s.size * (1 - 0.3 * (s.t / s.dur));
+      final moveFrac = (s.t / s.dur).clamp(0.0, 1.0);
+      final alpha = (1 - s.t).clamp(0.0, 1.0);
       squarePaint.color = Color.fromRGBO(s.color.r, s.color.g, s.color.b, alpha);
       canvas.drawRect(
         Rect.fromCenter(
-          center: _off(s.x, s.y),
-          width: side,
-          height: side,
+          center: _off(s.x + s.vx * moveFrac, s.y + s.vy * moveFrac),
+          width: s.size,
+          height: s.size,
         ),
         squarePaint,
       );
