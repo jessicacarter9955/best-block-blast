@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart';
 
 import 'block_blast_game.dart';
 import 'layout_constants.dart';
+import 'palette.dart';
 import 'shapes.dart';
 
 /// All rendering — a visual 1:1 of the original layers:
@@ -34,7 +35,10 @@ extension GameRendering on BlockBlastGame {
   // =====================================================================
 
   void _drawBackground(Canvas canvas) {
-    final bg = sprites.get('Bg');
+    // 1:1: la home usa lo sfondo bokeh della home di riferimento, il gameplay
+    // quello della schermata di gioco (entrambi estratti dagli screenshot).
+    final isHome = state == GameState.home;
+    final bg = sprites.get(isHome ? 'BgHome' : 'Bg');
     bg.render(canvas, position: Vector2.zero(), size: Vector2(Design.width, Design.height));
   }
 
@@ -43,13 +47,15 @@ extension GameRendering on BlockBlastGame {
   // =====================================================================
 
   void _drawBoard(Canvas canvas) {
-    // Board sprite: 990x990 art at 1000x1000, center (540, 831).
+    // 1:1: frame neon 1086×1086 con glow esterno, centrato sulla board:
+    // l'area celle (960px a offset 63) coincide coi centri spot 60..1020.
     final board = sprites.get('Board');
     board.render(
       canvas,
-      position: Vector2(Design.boardX - Design.boardSize / 2,
-          Design.boardY - Design.boardSize / 2),
-      size: Vector2(Design.boardSize, Design.boardSize),
+      position: Vector2(
+          Design.boardX - Design.boardArtSize / 2,
+          Design.boardY - Design.boardArtSize / 2),
+      size: Vector2(Design.boardArtSize, Design.boardArtSize),
     );
 
     // Spots (116x116 markers on the 120 grid).
@@ -211,19 +217,8 @@ extension GameRendering on BlockBlastGame {
   void _drawTray(Canvas canvas) {
     for (var i = 0; i < 3; i++) {
       final ph = slotCenter(i);
-      // PlaceHolder art at 20% opacity (original instance color alpha).
-      final phSprite = sprites.get('PlaceHolder');
-      canvas.saveLayer(
-        Rect.fromCenter(center: _off(ph.x, ph.y), width: Design.phSize + 8, height: Design.phSize + 8),
-        Paint()..color = const Color(0x33FFFFFF),
-      );
-      phSprite.render(
-        canvas,
-        position: Vector2(ph.x - Design.phSize / 2, ph.y - Design.phSize / 2),
-        size: Vector2(Design.phSize, Design.phSize),
-      );
-      canvas.restore();
-
+      // 1:1: nessun PlaceHolder visibile — i pezzi fluttuano sullo sfondo
+      // bokeh esattamente come nella screenshot di riferimento.
       final slot = tray[i];
       if (slot == null || slot.placed) continue;
       if (i == dragSlot) continue; // drawn separately on top
@@ -350,7 +345,8 @@ extension GameRendering on BlockBlastGame {
     if (state == GameState.home) return;
 
     // Heart behind the score (original Heart at (540, 210), Sine pulse).
-    if (heartVisible) {
+    // 1:1: nello screen di riferimento non c'è → nascosto.
+    if (BlockPalette.showHeart && heartVisible) {
       final heart = sprites.get('Heart');
       final pulse = 1 + 0.08 * math.sin(heartPulse * 6.4);
       final s = Design.heartSize * pulse;
@@ -361,34 +357,42 @@ extension GameRendering on BlockBlastGame {
       );
     }
 
-    // Score (bitmap font, natural size).
-    scoreFont.drawCentered(
+    // Score (1:1: cifre bianche con bordo blu come nel riferimento).
+    _drawGameText(
       canvas,
       scoreShown.toInt().toString(),
       Design.width / 2,
       Design.txtScoreY,
+      100,
+      BlockPalette.text,
+      BlockPalette.scoreStroke,
+      10,
     );
 
-    // Best score: cup + digits (left-anchored at 158).
+    // Best score: crown + cifre oro (1:1).
     final cup = sprites.get('CupIcon');
     cup.render(
       canvas,
-      position: Vector2(Design.cupX - Design.cupSize / 2, Design.cupY - Design.cupSize / 2),
-      size: Vector2(Design.cupSize, Design.cupSize),
+      position: Vector2(Design.cupX - Design.cupSize / 2, Design.cupY - Design.cupH / 2),
+      size: Vector2(Design.cupSize, Design.cupH),
     );
     final bestText = bestShown.toInt().toString();
-    final bestW = scoreFont.measureWidth(bestText);
-    scoreFont.drawCentered(
+    final bestW = _measureGameText(bestText, 54);
+    _drawGameText(
       canvas,
       bestText,
       Design.bestScoreX + bestW / 2,
       Design.bestScoreY,
+      54,
+      BlockPalette.gold,
+      const Color(0xFF7A4600),
+      5,
     );
 
-    // Pause button.
+    // Pause button (1:1: sprite col glow, leggermente più grande dell'hit box).
     final pause = sprites.get('BtnPause');
     _drawSpriteCentered(canvas, pause, Design.pauseBtnX, Design.pauseBtnY,
-        Design.pauseBtnSize, Design.pauseBtnSize);
+        Design.pauseImgW, Design.pauseImgH);
 
     // Combo display (original "Combo" group).
     _drawComboDisplay(canvas);
@@ -547,13 +551,16 @@ extension GameRendering on BlockBlastGame {
       canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * reviveRadial / 100, false, paint);
     }
 
-    // Countdown number (big bitmap digits).
-    scoreFont.drawCentered(
+    // Countdown number (big digits, oro su cerchio revive).
+    _drawGameText(
       canvas,
       reviveText.toString(),
       Design.reviveCircleX,
       Design.reviveCircleY,
-      scale: 2.0,
+      200,
+      BlockPalette.text,
+      BlockPalette.gold,
+      14,
     );
 
     final btn = sprites.get('BtnRevive');
@@ -591,13 +598,16 @@ extension GameRendering on BlockBlastGame {
       canvas, labelBest, 540, Design.goBestLabelY, 262, 45,
     );
 
-    // Big score with count-up.
-    scoreFont.drawCentered(
+    // Big score with count-up (1:1: bianco + bordo blu).
+    _drawGameText(
       canvas,
       goScoreShown.toInt().toString(),
       540,
       Design.goScoreY,
-      scale: 1.55,
+      155,
+      BlockPalette.text,
+      BlockPalette.scoreStroke,
+      14,
     );
 
     // Cup + best (left-anchored group at (482, 1223)).
@@ -606,12 +616,16 @@ extension GameRendering on BlockBlastGame {
       canvas, cup, Design.goCupX, Design.goCupY, Design.goCupSize, Design.goCupSize,
     );
     final bestText = storage.bestScore.toString();
-    final bestW = scoreFont.measureWidth(bestText);
-    scoreFont.drawCentered(
+    final bestW = _measureGameText(bestText, 54);
+    _drawGameText(
       canvas,
       bestText,
       Design.goBestX + bestW / 2,
       Design.goBestY,
+      54,
+      BlockPalette.gold,
+      const Color(0xFF7A4600),
+      5,
     );
 
     // Play again button.
@@ -695,41 +709,35 @@ extension GameRendering on BlockBlastGame {
   // =====================================================================
 
   void _drawHome(Canvas canvas) {
-    // LightBlueBg backdrop.
-    final bg = sprites.get('LightBlueBg');
-    final bw = 1277.0, bh = 2094.0;
-    bg.render(
-      canvas,
-      position: Vector2(540 - bw / 2, 960 - bh / 2),
-      size: Vector2(bw, bh),
-    );
+    // 1:1: lo sfondo bokeh home è già disegnato da _drawBackground (BgHome);
+    // qui solo logo, PLAY e bottoni circolari, alle posizioni misurate.
 
-    // Logo (Sprite2, the original title art).
+    // Logo (Sprite2 = logo BLOCK RUSH estratto dallo screen home).
     final logo = sprites.get('Sprite2');
     _drawSpriteCentered(
       canvas, logo, Design.logoX, Design.logoY, Design.logoW, Design.logoH,
     );
 
-    // Play button.
+    // Play button (arancione col triangolo).
     final play = sprites.get('BtnPlay');
     _drawSpriteCentered(
       canvas, play, Design.btnPlayX, Design.btnPlayY, Design.btnPlayW, Design.btnPlayH,
     );
 
-    // Round buttons: ranking (cup), music, sfx.
+    // Round buttons: ranking (cup), music, sfx (sprite 240×240, cerchio 132).
     final ranking = sprites.get('BtnRanking');
     _drawSpriteCentered(
-      canvas, ranking, 540, Design.homeBtnY, Design.homeBtnSize, Design.homeBtnSize,
+      canvas, ranking, 540, Design.homeBtnY, Design.homeBtnArtSize, Design.homeBtnArtSize,
     );
     final musicFrame = storage.musicOn ? 0 : 1;
     final music = sprites.get('BtnMusic2', frame: musicFrame);
     _drawSpriteCentered(
-      canvas, music, Design.homeMusicX, Design.homeBtnY, Design.homeBtnSize, Design.homeBtnSize,
+      canvas, music, Design.homeMusicX, Design.homeBtnY, Design.homeBtnArtSize, Design.homeBtnArtSize,
     );
     final sfxFrame = storage.sfxOn ? 0 : 1;
     final sfx = sprites.get('BtnSFX2', frame: sfxFrame);
     _drawSpriteCentered(
-      canvas, sfx, Design.homeSfxX, Design.homeBtnY, Design.homeBtnSize, Design.homeBtnSize,
+      canvas, sfx, Design.homeSfxX, Design.homeBtnY, Design.homeBtnArtSize, Design.homeBtnArtSize,
     );
   }
 
@@ -740,6 +748,45 @@ extension GameRendering on BlockBlastGame {
   void _drawSpriteCentered(
       Canvas canvas, Sprite sprite, double cx, double cy, double w, double h) {
     sprite.render(canvas, position: Vector2(cx - w / 2, cy - h / 2), size: Vector2(w, h));
+  }
+
+  /// Testo di gioco 1:1 (font Luckiest Guy): prima lo stroke, poi il fill,
+  /// centrato su (cx, cy) — come lo score bianco/bordo blu del riferimento.
+  void _drawGameText(Canvas canvas, String text, double cx, double cy,
+      double size, Color fill, Color stroke, double strokeW) {
+    final fillTp = _gameTextPainter(text, size, fill, null);
+    final dx = cx - fillTp.width / 2;
+    final dy = cy - fillTp.height / 2;
+    if (strokeW > 0) {
+      final strokePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeW
+        ..strokeJoin = StrokeJoin.round
+        ..color = stroke;
+      final strokeTp = _gameTextPainter(text, size, null, strokePaint);
+      strokeTp.paint(canvas, Offset(dx, dy));
+    }
+    fillTp.paint(canvas, Offset(dx, dy));
+  }
+
+  double _measureGameText(String text, double size) {
+    final tp = _gameTextPainter(text, size, const Color(0xFFFFFFFF), null);
+    return tp.width;
+  }
+
+  TextPainter _gameTextPainter(String text, double size, Color? color, Paint? foreground) {
+    return TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontFamily: 'LuckiestGuy',
+          fontSize: size,
+          color: foreground == null ? color : null,
+          foreground: foreground,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
   }
 
   void _drawText(Canvas canvas, String text, double x, double y, double size,
@@ -758,7 +805,7 @@ extension GameRendering on BlockBlastGame {
           color: color,
           fontSize: size,
           fontWeight: FontWeight.w700,
-          fontFamily: 'Roboto',
+          fontFamily: 'LuckiestGuy',
         ),
       ),
       textDirection: TextDirection.ltr,

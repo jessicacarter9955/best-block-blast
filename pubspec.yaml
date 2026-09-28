@@ -29,3 +29,7 @@ flutter:
     - assets/sprites-named/
     # manifest.json is in the same folder, listed above
     - assets/data/ranking.json
+  fonts:
+    - family: LuckiestGuy
+      fonts:
+        - asset: assets/fonts/LuckiestGuy-Regular.ttf

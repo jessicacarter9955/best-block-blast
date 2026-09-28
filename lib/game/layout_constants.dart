@@ -18,6 +18,7 @@ class Design {
   static const double boardX = 540;
   static const double boardY = 831;
   static const double boardSize = 1000;
+  static const double boardArtSize = 1086; // sprite neon frame (glow incluso)
   static const double bigSize = 120; // cell size on the board (BigSize)
   static const double smallSize = 60; // cell size in the tray (SmallSize)
   static const double gridOriginX = 120; // spot(0,0) center x
@@ -34,11 +35,14 @@ class Design {
   static const double cupX = 97;
   static const double cupY = 76;
   static const double cupSize = 104;
+  static const double cupH = 110; // crown.png 120×127 → 104×110
   static const double bestScoreX = 158;
   static const double bestScoreY = 82;
   static const double pauseBtnX = 974;
   static const double pauseBtnY = 88;
-  static const double pauseBtnSize = 100;
+  static const double pauseBtnSize = 100; // hit box
+  static const double pauseImgW = 158; // sprite col glow (124×131 → ~158×167)
+  static const double pauseImgH = 167;
   static const double heartX = 540;
   static const double heartY = 210;
   static const double heartSize = 240;
@@ -113,19 +117,21 @@ class Design {
   static const double lbCloseY = 275;
   static const double lbCloseSize = 89.3;
 
-  // === Home ===
+  // === Home (posizioni 1:1 misurate sugli screen di riferimento: logo 30.2%,
+  // play 69.5%, bottoni 86.2% dell'altezza) ===
   static const double logoX = 540.5;
-  static const double logoY = 532;
-  static const double logoW = 837;
+  static const double logoY = 580;
+  static const double logoW = 820; // 840×910 in scala 888/910
   static const double logoH = 888;
   static const double btnPlayX = 540;
-  static const double btnPlayY = 1295;
-  static const double btnPlayW = 625;
-  static const double btnPlayH = 216;
+  static const double btnPlayY = 1334;
+  static const double btnPlayW = 610; // 585×224 in scala
+  static const double btnPlayH = 233;
   static const double homeMusicX = 906;
   static const double homeSfxX = 175;
-  static const double homeBtnY = 1770;
-  static const double homeBtnSize = 170;
+  static const double homeBtnY = 1655;
+  static const double homeBtnSize = 170; // hit box
+  static const double homeBtnArtSize = 220; // sprite 240×240 (cerchio 60% = 132)
 
   // === No space left banner ===
   static const double noSpaceX = 540;
