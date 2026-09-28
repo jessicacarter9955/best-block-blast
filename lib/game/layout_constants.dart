@@ -34,15 +34,15 @@ class Design {
   static const double txtScoreY = 211.5;
   static const double cupX = 97;
   static const double cupY = 76;
-  static const double cupSize = 104;
-  static const double cupH = 110; // crown.png 120×127 → 104×110
+  static const double cupSize = 108;
+  static const double cupH = 108; // crown.png 126×126 quadrata, ricentrata
   static const double bestScoreX = 158;
   static const double bestScoreY = 82;
   static const double pauseBtnX = 974;
   static const double pauseBtnY = 88;
   static const double pauseBtnSize = 100; // hit box
-  static const double pauseImgW = 158; // sprite col glow (124×131 → ~158×167)
-  static const double pauseImgH = 167;
+  static const double pauseImgW = 194; // sprite quadrata col glow (152×152, cerchio 66%)
+  static const double pauseImgH = 194;
   static const double heartX = 540;
   static const double heartY = 210;
   static const double heartSize = 240;
@@ -88,7 +88,7 @@ class Design {
   static const double goBannerX = 540.2;
   static const double goBannerY = 506.4;
   static const double goBannerW = 940.4;
-  static const double goBannerH = 156.4;
+  static const double goBannerH = 101; // banner 940×101 (crop padding basso)
   static const double goScoreLabelY = 761.3;
   static const double goScoreY = 905;
   static const double goBestLabelY = 1113;
@@ -131,7 +131,7 @@ class Design {
   static const double homeSfxX = 175;
   static const double homeBtnY = 1655;
   static const double homeBtnSize = 170; // hit box
-  static const double homeBtnArtSize = 220; // sprite 240×240 (cerchio 60% = 132)
+  static const double homeBtnArtSize = 233; // sprite normalizzata: cerchio 70% del canvas → cerchio ~163px
 
   // === No space left banner ===
   static const double noSpaceX = 540;
