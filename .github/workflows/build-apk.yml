@@ -9,6 +9,10 @@ on:
   push:
   workflow_dispatch:
 
+# permessi per pubblicare la Release "latest" con l'APK
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Release APK
