@@ -1,6 +1,6 @@
 name: Build Release APK
 
-# Builds the Block Rush 1:1 Flutter app for Android.
+# Builds the Block Blast Rosso 1:1 Flutter app for Android.
 # Every push to master builds a RELEASE APK and uploads it as a GitHub
 # Actions artifact (downloadable from the Actions tab). Tag pushes (v*)
 # also attach the APK to a GitHub Release.

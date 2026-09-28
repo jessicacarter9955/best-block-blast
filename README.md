@@ -1,15 +1,18 @@
-# Block Rush 1:1 — Native Flutter port (pixel perfect)
+# Block Blast Rosso 1:1 — Native Flutter port (pixel perfect)
 
-A native Flutter port of the **Block Rush** puzzle game using the **Flame**
-game engine. No WebView — the game logic, rendering, audio, and UI are all
-native Dart code. This is the **1:1 pixel perfect** version: same mechanics,
-same layout coordinates (1080×1920 design), same scoring, combo, tutorial and
-ranking logic — with the Block Rush art direction (flat #4E076D purple
-background, uniform #2A0139 board, glossy 3-band blocks with colors sampled
-from the real game, lavender UI buttons).
+A native Flutter port of the **Block Blast** puzzle game (red candy theme from
+the user's reference screenshots) using the **Flame** game engine. No WebView —
+the game logic, rendering, audio, and UI are all native Dart code. This is the
+**1:1 pixel perfect** version: same mechanics, same layout coordinates
+(1080×1920 design), same scoring, combo, tutorial and ranking logic — with the
+**real art extracted from the reference screenshots**: the actual cleaned red
+gradient background, the beveled red cells, the 8 candy flavors (rosa, giallo,
+lime, latte, arancio, fondente, menta, rosso) extracted pixel-by-pixel, the
+gold "BLOCK BLAST" logo with extrusion, glossy red PLAY button and gold-ring
+icon buttons.
 
-> This repository ships **only the Block Rush 1:1 version** — no other skin
-> variants are included. Every push to `master` builds a **release APK**
+> This repository ships **only the Block Blast Rosso 1:1 version** — no other
+> skin variants are included. Every push to `master` builds a **release APK**
 > via GitHub Actions (see the Actions tab → "Build Release APK" → artifacts).
 
 ## Project layout
