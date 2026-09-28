@@ -131,10 +131,10 @@ class BlockBlastGame extends FlameGame {
   final List<Scheduled> _pending = [];
   int _scheduledSerial = 0;
 
-  /// Letterbox color matching the Block Blast Rosso background
-  /// (gradient #B11524 → #7A0A12, midpoint).
+  /// Letterbox color matching the Block Rush background (flat #4E076D,
+  /// sampled from the real game).
   @override
-  Color backgroundColor() => const Color(0xFF961018);
+  Color backgroundColor() => const Color(0xFF4E076D);
 
   @override
   Future<void> onLoad() async {
@@ -1199,18 +1199,18 @@ class NoSpaceBanner {
 class RgbColor {
   RgbColor(this.r, this.g, this.b);
   factory RgbColor.fromColor(int blockFrameIdx) {
-    // Block Blast Rosso 1:1 palette (i gusti caramella estratti dallo
-    // screenshot dell'utente), stesso ordine dei frame Block:
-    // latte, menta, lime, fondente, giallo, arancio, rosso, rosa.
+    // Block Rush palette (sampled from the real game screenshot), same
+    // frame order as the Block sprites: viola, ciano, verde, blu, giallo,
+    // arancio, rosso, magenta.
     const values = [
-      (98, 31, 8),
-      (12, 190, 177),
-      (133, 167, 0),
-      (75, 24, 4),
-      (254, 215, 21),
-      (252, 102, 4),
-      (214, 37, 73),
-      (224, 44, 84),
+      (136, 72, 224),
+      (0, 192, 192),
+      (1, 197, 1),
+      (0, 144, 248),
+      (248, 208, 0),
+      (200, 125, 0),
+      (196, 10, 10),
+      (196, 10, 196),
     ];
     final v = values[blockFrameIdx.clamp(0, 7)];
     return RgbColor(v.$1, v.$2, v.$3);
