@@ -6,8 +6,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 1080,
-  "src_h": 1920,
+  "src_w": 941,
+  "src_h": 1672,
   "file": "assets/sprites-named/Bg-f00.png"
  },
  {
@@ -215,8 +215,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 1086,
-  "src_h": 1086,
+  "src_w": 920,
+  "src_h": 910,
   "file": "assets/sprites-named/Board-f00.png"
  },
  {
@@ -237,8 +237,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 254,
-  "src_h": 254,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnMusic2-f00.png"
  },
  {
@@ -248,8 +248,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 254,
-  "src_h": 254,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnMusic2-f01.png"
  },
  {
@@ -259,8 +259,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 152,
-  "src_h": 152,
+  "src_w": 173,
+  "src_h": 174,
   "file": "assets/sprites-named/BtnPause-f00.png"
  },
  {
@@ -270,8 +270,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 585,
-  "src_h": 224,
+  "src_w": 630,
+  "src_h": 260,
   "file": "assets/sprites-named/BtnPlay-f00.png"
  },
  {
@@ -303,8 +303,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 246,
-  "src_h": 246,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnSFX2-f00.png"
  },
  {
@@ -314,8 +314,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 246,
-  "src_h": 246,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnSFX2-f01.png"
  },
  {
@@ -358,8 +358,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 126,
-  "src_h": 126,
+  "src_w": 194,
+  "src_h": 143,
   "file": "assets/sprites-named/CupIcon-f00.png"
  },
  {
@@ -644,8 +644,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 420,
-  "src_h": 200,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnMusic-f00.png"
  },
  {
@@ -655,8 +655,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 420,
-  "src_h": 200,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnMusic-f01.png"
  },
  {
@@ -677,8 +677,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 420,
-  "src_h": 200,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnSFX-f00.png"
  },
  {
@@ -688,8 +688,8 @@
   "sheet": "extracted",
   "src_x": 0,
   "src_y": 0,
-  "src_w": 420,
-  "src_h": 200,
+  "src_w": 251,
+  "src_h": 251,
   "file": "assets/sprites-named/BtnSFX-f01.png"
  },
  {

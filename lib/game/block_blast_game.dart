@@ -306,7 +306,29 @@ class BlockBlastGame extends FlameGame {
     }
   }
 
-  Vector2 slotCenter(int i) => Vector2(Design.trayX[i], Design.trayY);
+  /// 1:1 reference: 3 pezzi COMPATTI al centro (cella 89px, gap 4px),
+  /// gruppo centrato a x 538 — come nello screenshot del gioco vero.
+  Vector2 slotCenter(int i) {
+    double total = 0;
+    for (var s = 0; s < 3; s++) {
+      final slot = tray[s];
+      final shape = slot == null || slot.placed
+          ? const [[1]]
+          : kShapes[slot.shapeIdx];
+      total += (shape[0].length * Design.smallSize) + (s < 2 ? Design.trayGap : 0);
+    }
+    var cx = Design.trayCenterX - total / 2;
+    for (var s = 0; s <= i; s++) {
+      final slot = tray[s];
+      final shape = slot == null || slot.placed
+          ? const [[1]]
+          : kShapes[slot.shapeIdx];
+      final w = shape[0].length * Design.smallSize;
+      if (s < i) cx += w + Design.trayGap;
+      if (s == i) return Vector2(cx + w / 2, Design.trayY);
+    }
+    return Vector2(Design.trayCenterX, Design.trayY);
+  }
 
   // =====================================================================
   //  Drag & drop (original "Dragging Blocks" group)
@@ -1026,15 +1048,15 @@ class BlockBlastGame extends FlameGame {
             Design.btnPlayH)) {
           return 'home_play';
         }
-        if (_contains(p, Design.btnPlayX, Design.homeBtnY, Design.homeBtnSize,
+        if (_contains(p, 539, Design.homeBtnY, Design.homeBtnSize,
             Design.homeBtnSize)) {
           return 'home_ranking';
         }
-        if (_contains(p, Design.homeMusicX, Design.homeBtnY, 170,
+        if (_contains(p, Design.homeMusicX, Design.homeBtnY, Design.homeBtnSize,
             Design.homeBtnSize)) {
           return 'home_music';
         }
-        if (_contains(p, Design.homeSfxX, Design.homeBtnY, 170,
+        if (_contains(p, Design.homeSfxX, Design.homeBtnY, Design.homeBtnSize,
             Design.homeBtnSize)) {
           return 'home_sfx';
         }

@@ -15,34 +15,42 @@ class Design {
   static const double height = 1920;
 
   // === Board & grid ===
-  static const double boardX = 540;
-  static const double boardY = 831;
+  // 1:1 dai reference: celle ref x 64-864 (8×100), y 332-1154 (8×102.7)
+  // → app 1080: board center (532, 854), celle 120px, origine spot (112, 434).
+  static const double boardX = 532;
+  static const double boardY = 854;
   static const double boardSize = 1000;
-  static const double boardArtSize = 1086; // sprite neon frame (glow incluso)
+  // Frame = board COMPLETA (bordo neon + interno): rettangolo 1104×1063
+  // a (-13, 319) assoluti (mappato dal ref (10,285)-(930,1195) sulle celle).
+  static const double boardArtL = -13;
+  static const double boardArtT = 319;
+  static const double boardArtW = 1104;
+  static const double boardArtH = 1063;
   static const double bigSize = 120; // cell size on the board (BigSize)
-  static const double smallSize = 60; // cell size in the tray (SmallSize)
-  static const double gridOriginX = 120; // spot(0,0) center x
-  static const double gridOriginY = 411; // spot(0,0) center y
+  static const double smallSize = 89; // cell size in the tray (1:1 ref: 78px→89)
+  static const double gridOriginX = 112; // spot(0,0) center x
+  static const double gridOriginY = 434; // spot(0,0) center y
   static const int gridSize = 8;
 
-  // === Tray (PlaceHolders) ===
-  static const double trayY = 1626;
+  // === Tray (PlaceHolders) — 1:1: pezzi compatti al centro (x 538, y 1600) ===
+  static const double trayY = 1600;
+  static const double trayGap = 4;
+  static const double trayCenterX = 538;
   static const double phSize = 250;
-  static const List<double> trayX = [196.5, 539.5, 883.5];
 
   // === HUD ===
-  static const double txtScoreY = 211.5;
-  static const double cupX = 97;
-  static const double cupY = 76;
-  static const double cupSize = 108;
-  static const double cupH = 108; // crown.png 126×126 quadrata, ricentrata
-  static const double bestScoreX = 158;
-  static const double bestScoreY = 82;
-  static const double pauseBtnX = 974;
-  static const double pauseBtnY = 88;
-  static const double pauseBtnSize = 100; // hit box
-  static const double pauseImgW = 194; // sprite quadrata col glow (152×152, cerchio 66%)
-  static const double pauseImgH = 194;
+  static const double txtScoreY = 243;
+  static const double cupX = 143;
+  static const double cupY = 107;
+  static const double cupSize = 222; // patch crown 194×143 → 222×164
+  static const double cupH = 164;
+  static const double bestScoreX = 193; // bordo sinistro delle cifre best
+  static const double bestScoreY = 138;
+  static const double pauseBtnX = 981;
+  static const double pauseBtnY = 105;
+  static const double pauseBtnSize = 118; // hit box (squircle)
+  static const double pauseImgW = 198; // patch 173×174 (squircle 59.5%)
+  static const double pauseImgH = 198;
   static const double heartX = 540;
   static const double heartY = 210;
   static const double heartSize = 240;
@@ -117,21 +125,21 @@ class Design {
   static const double lbCloseY = 275;
   static const double lbCloseSize = 89.3;
 
-  // === Home (posizioni 1:1 misurate sugli screen di riferimento: logo 30.2%,
-  // play 69.5%, bottoni 86.2% dell'altezza) ===
+  // === Home (1:1 reference: play 722×298 a (533,1319); bottoni sfx 204 ·
+  // ranking 539 · music 882 @1664, disco 202 → patch 288 = 202/0.70) ===
   static const double logoX = 540.5;
   static const double logoY = 580;
-  static const double logoW = 820; // 840×910 in scala 888/910
+  static const double logoW = 820;
   static const double logoH = 888;
-  static const double btnPlayX = 540;
-  static const double btnPlayY = 1334;
-  static const double btnPlayW = 610; // 585×224 in scala
-  static const double btnPlayH = 233;
-  static const double homeMusicX = 906;
-  static const double homeSfxX = 175;
-  static const double homeBtnY = 1655;
-  static const double homeBtnSize = 170; // hit box
-  static const double homeBtnArtSize = 233; // sprite normalizzata: cerchio 70% del canvas → cerchio ~163px
+  static const double btnPlayX = 533;
+  static const double btnPlayY = 1319;
+  static const double btnPlayW = 722;
+  static const double btnPlayH = 298;
+  static const double homeMusicX = 882;
+  static const double homeSfxX = 204;
+  static const double homeBtnY = 1664;
+  static const double homeBtnSize = 202; // hit box (disco)
+  static const double homeBtnArtSize = 288; // patch 251×251 (disco 70%)
 
   // === No space left banner ===
   static const double noSpaceX = 540;

@@ -74,6 +74,30 @@ jobs:
           retention-days: 90
           if-no-files-found: error
 
+      # Release "latest" SEMPRE aggiornata: APK scaricabile con un click da
+      # https://github.com/jessicacarter9955/best-block-blast/releases/latest
+      # (niente Actions tab, niente artifact scaduto o zip da spacchettare).
+      - name: Also copy as block-rush-latest.apk
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        run: |
+          cp "artifacts/${APK_NAME}" artifacts/block-rush-latest.apk
+
+      - name: Publish APK to the 'latest' Release
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Block Rush — APK più recente
+          body: |
+            APK release più recente (auto-pubblicato a ogni push).
+
+            **Scarica:** `block-rush-latest.apk` qui sotto 👇
+          files: artifacts/*.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Attach APK to GitHub Release (on tag)
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2

@@ -52,26 +52,12 @@ extension GameRendering on BlockBlastGame {
     final board = sprites.get('Board');
     board.render(
       canvas,
-      position: Vector2(
-          Design.boardX - Design.boardArtSize / 2,
-          Design.boardY - Design.boardArtSize / 2),
-      size: Vector2(Design.boardArtSize, Design.boardArtSize),
+      position: Vector2(Design.boardArtL, Design.boardArtT),
+      size: Vector2(Design.boardArtW, Design.boardArtH),
     );
 
-    // Spots (116x116 markers on the 120 grid).
-    final spot = sprites.get('Spot');
-    final spotSize = spot.srcSize;
-    for (var y = 0; y < Design.gridSize; y++) {
-      for (var x = 0; x < Design.gridSize; x++) {
-        final cx = Design.gridOriginX + x * Design.bigSize;
-        final cy = Design.gridOriginY + y * Design.bigSize;
-        spot.render(
-          canvas,
-          position: Vector2(cx - spotSize.x / 2, cy - spotSize.y / 2),
-          size: spotSize,
-        );
-      }
-    }
+    // 1:1: l'interno della board (celle + separatori) è già dentro lo sprite
+    // Board — nessuno Spot da disegnare sopra.
 
     // Drag preview: BlockBelow (30% opacity, piece color) on target cells.
     if (dragSlot >= 0 && dragValid && dragTargets.isNotEmpty) {
@@ -363,10 +349,10 @@ extension GameRendering on BlockBlastGame {
       scoreShown.toInt().toString(),
       Design.width / 2,
       Design.txtScoreY,
-      100,
+      172,
       BlockPalette.text,
       BlockPalette.scoreStroke,
-      10,
+      14,
     );
 
     // Best score: crown + cifre oro (1:1).
@@ -377,16 +363,16 @@ extension GameRendering on BlockBlastGame {
       size: Vector2(Design.cupSize, Design.cupH),
     );
     final bestText = bestShown.toInt().toString();
-    final bestW = _measureGameText(bestText, 54);
+    final bestW = _measureGameText(bestText, 92);
     _drawGameText(
       canvas,
       bestText,
       Design.bestScoreX + bestW / 2,
       Design.bestScoreY,
-      54,
+      92,
       BlockPalette.gold,
-      const Color(0xFF7A4600),
-      5,
+      const Color(0xFF5A1A66),
+      7,
     );
 
     // Pause button (1:1: sprite col glow, leggermente più grande dell'hit box).
@@ -712,13 +698,8 @@ extension GameRendering on BlockBlastGame {
     // 1:1: lo sfondo bokeh home è già disegnato da _drawBackground (BgHome);
     // qui solo logo, PLAY e bottoni circolari, alle posizioni misurate.
 
-    // Logo (Sprite2 = logo BLOCK RUSH estratto dallo screen home).
-    final logo = sprites.get('Sprite2');
-    _drawSpriteCentered(
-      canvas, logo, Design.logoX, Design.logoY, Design.logoW, Design.logoH,
-    );
-
-    // Play button (arancione col triangolo).
+    // 1:1: il logo BLOCK RUSH è già dentro BgHome (baked dal reference).
+    // Play button (arancione col triangolo): patch 722x298 a (533, 1319).
     final play = sprites.get('BtnPlay');
     _drawSpriteCentered(
       canvas, play, Design.btnPlayX, Design.btnPlayY, Design.btnPlayW, Design.btnPlayH,
@@ -727,7 +708,7 @@ extension GameRendering on BlockBlastGame {
     // Round buttons: ranking (cup), music, sfx (sprite 240×240, cerchio 132).
     final ranking = sprites.get('BtnRanking');
     _drawSpriteCentered(
-      canvas, ranking, 540, Design.homeBtnY, Design.homeBtnArtSize, Design.homeBtnArtSize,
+      canvas, ranking, 539, Design.homeBtnY, Design.homeBtnArtSize, Design.homeBtnArtSize,
     );
     final musicFrame = storage.musicOn ? 0 : 1;
     final music = sprites.get('BtnMusic2', frame: musicFrame);
