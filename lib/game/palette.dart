@@ -1,12 +1,11 @@
 import 'dart:ui';
 
-/// Original Block Blast colors — sampled directly from the original
-/// block-sheet0.png frames (the repo now ships the ORIGINAL sprites,
-/// restored from the game's CDN).
+/// Block Rush colors — sampled directly from the real game screenshot
+/// (1170×2532, cells 128.25px, pixel-probed).
 ///
-/// Frame order (matches data.json Block animation frames):
-///   0 lavender, 1 cyan, 2 green, 3 blue,
-///   4 yellow, 5 orange, 6 red, 7 pink
+/// Frame order (matches the Block sprites):
+///   0 viola, 1 ciano, 2 verde, 3 blu,
+///   4 giallo, 5 arancio, 6 rosso, 7 magenta
 class BlockPalette {
   BlockPalette._();
 
@@ -15,19 +14,20 @@ class BlockPalette {
   /// Base color of each Block sprite frame (used for the drag-preview tint,
   /// line-clear effect colors and square particles).
   static const List<Color> blockColors = [
-    Color(0xFF8D5FD7), // frame 0 — lavender  (139, 95, 215)
-    Color(0xFF36B2E1), // frame 1 — cyan      (54, 178, 225)
-    Color(0xFF3BB43B), // frame 2 — green     (59, 180, 59)
-    Color(0xFF4864E7), // frame 3 — blue      (72, 100, 231)
-    Color(0xFFEDB632), // frame 4 — yellow    (237, 182, 50)
-    Color(0xFFED7821), // frame 5 — orange    (237, 120, 33)
-    Color(0xFFC93131), // frame 6 — red       (201, 49, 49)
-    Color(0xFFD35FD7), // frame 7 — pink      (211, 95, 215)
+    Color(0xFF8848E0), // frame 0 — viola    (136, 72, 224)
+    Color(0xFF00C0C0), // frame 1 — ciano    (0, 192, 192)
+    Color(0xFF01C501), // frame 2 — verde    (1, 197, 1)
+    Color(0xFF0090F8), // frame 3 — blu      (0, 144, 248)
+    Color(0xFFF8D000), // frame 4 — giallo   (248, 208, 0)
+    Color(0xFFC87D00), // frame 5 — arancio  (200, 125, 0)
+    Color(0xFFC40A0A), // frame 6 — rosso    (196, 10, 10)
+    Color(0xFFC40AC4), // frame 7 — magenta  (196, 10, 196)
   ];
 
-  // Screen chrome colors (from the original layout).
-  static const Color bg = Color(0xFF1E3580); // letterbox fill (gradient bottom tone)
-  static const Color gridCell = Color(0xFF212C52); // empty spot tone (33,44,82)
+  // Screen chrome colors (Block Rush theme).
+  static const Color bg = Color(0xFF4E076D); // flat deep purple background
+  static const Color gridCell = Color(0xFF2A0139); // uniform dark board
   static const Color text = Color(0xFFFFFFFF);
-  static const Color textMuted = Color(0xFF6B7280);
+  static const Color textMuted = Color(0xFFB39DDB);
+  static const Color accent = Color(0xFF9370DB); // lavender buttons
 }

@@ -1,10 +1,16 @@
-# Block Blast — Native Flutter port (1:1)
+# Block Rush 1:1 — Native Flutter port (pixel perfect)
 
-A native Flutter port of the **Block Blast** puzzle game using the **Flame**
+A native Flutter port of the **Block Rush** puzzle game using the **Flame**
 game engine. No WebView — the game logic, rendering, audio, and UI are all
-native Dart code. This is a **1:1 port** of the original Construct 3 /
-GameDistribution build: same sprites, same sounds, same layout coordinates
-(1080×1920 design), same scoring, combo, tutorial, and ranking logic.
+native Dart code. This is the **1:1 pixel perfect** version: same mechanics,
+same layout coordinates (1080×1920 design), same scoring, combo, tutorial and
+ranking logic — with the Block Rush art direction (flat #4E076D purple
+background, uniform #2A0139 board, glossy 3-band blocks with colors sampled
+from the real game, lavender UI buttons).
+
+> This repository ships **only the Block Rush 1:1 version** — no other skin
+> variants are included. Every push to `master` builds a **release APK**
+> via GitHub Actions (see the Actions tab → "Build Release APK" → artifacts).
 
 ## Project layout
 

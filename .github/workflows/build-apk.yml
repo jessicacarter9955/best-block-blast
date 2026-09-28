@@ -1,9 +1,9 @@
-name: Build Android APK
+name: Build Release APK
 
-# Builds the ChocoBlock Flutter app for Android on every push to main
-# and on every tag matching v* (e.g. v0.1.0). Uploads the APK as a
-# GitHub Actions artifact (downloadable from the Actions tab) and, on
-# tags, also attaches it to a GitHub Release.
+# Builds the Block Rush 1:1 Flutter app for Android.
+# Every push to master builds a RELEASE APK and uploads it as a GitHub
+# Actions artifact (downloadable from the Actions tab). Tag pushes (v*)
+# also attach the APK to a GitHub Release.
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: Build APK
+    name: Build Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -42,45 +42,33 @@ jobs:
         # `flutter create` generates the full android/ scaffold (with the
         # correct Gradle wrapper for this Flutter version) using our
         # --org and --project-name for the application ID.
-        # We previously committed our own android/ folder, but newer
-        # Flutter versions reject hand-written Gradle scaffolds. So we
-        # delete any pre-existing android/ folder (in case it's still
-        # tracked), let Flutter generate a fresh one, then overlay our
-        # customizations (manifest, styles, launcher icons, minSdk,
-        # release signing) via setup/apply-android-overrides.sh.
         run: flutter create --platforms=android --org com.jessicacarter --project-name chocoblock .
 
       - name: Apply custom Android overrides
-        # Overlays our custom AndroidManifest.xml, dark theme styles,
-        # 5-density launcher icons, proguard rules, and patches
-        # build.gradle.kts for minSdk=21 + release signing with debug key.
+        # Overlays our custom AndroidManifest.xml (Block Rush label,
+        # portrait lock), dark theme styles, 5-density launcher icons,
+        # proguard rules, and patches build.gradle.kts for minSdk=21 +
+        # release signing with debug key.
         run: bash setup/apply-android-overrides.sh
 
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Build debug APK (push to main/PR)
-        if: github.ref_type != 'tag'
-        run: flutter build apk --debug --no-tree-shake-icons
-
-      - name: Build release APK (tag push)
-        if: github.ref_type == 'tag'
+      - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK with commit/tag
         run: |
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             VERSION="${GITHUB_REF_NAME}"
-            BUILD_TYPE="release"
           else
             VERSION="${GITHUB_SHA::7}"
-            BUILD_TYPE="debug"
           fi
           mkdir -p artifacts
-          cp build/app/outputs/flutter-apk/app-${BUILD_TYPE}.apk \
-             "artifacts/chocoblock-${BUILD_TYPE}-${VERSION}.apk"
-          echo "APK_PATH=artifacts/chocoblock-${BUILD_TYPE}-${VERSION}.apk" >> $GITHUB_ENV
-          echo "APK_NAME=chocoblock-${BUILD_TYPE}-${VERSION}.apk" >> $GITHUB_ENV
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             "artifacts/block-rush-release-${VERSION}.apk"
+          echo "APK_PATH=artifacts/block-rush-release-${VERSION}.apk" >> $GITHUB_ENV
+          echo "APK_NAME=block-rush-release-${VERSION}.apk" >> $GITHUB_ENV
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
