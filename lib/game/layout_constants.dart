@@ -43,17 +43,17 @@ class Design {
 
   // === HUD ===
   static const double txtScoreY = 243;
-  static const double cupX = 111; // patch corona pulita 138×143 -> 158×164
+  static const double cupX = 111; // corona pulita 118×101 (sfondo rimosso) -> 158×135
   static const double cupY = 107;
   static const double cupSize = 158; // crown-only patch (senza lo 0 baked)
-  static const double cupH = 164;
-  static const double bestScoreX = 193; // bordo sinistro delle cifre best
-  static const double bestScoreY = 138;
+  static const double cupH = 135;
+  static const double bestScoreX = 111; // centrato SOTTO la corona (richiesta utente)
+  static const double bestScoreY = 258;
   static const double pauseBtnX = 981;
   static const double pauseBtnY = 115;
   static const double pauseBtnSize = 118; // hit box (squircle)
-  static const double pauseImgW = 190; // patch ricostruita 173×210
-  static const double pauseImgH = 230;
+  static const double pauseImgW = 185; // squircle quadrata ricostruita 220×220
+  static const double pauseImgH = 185;
   static const double heartX = 540;
   static const double heartY = 210;
   static const double heartSize = 240;
@@ -105,8 +105,8 @@ class Design {
   static const double goBestLabelY = 1113;
   static const double goCupX = 407.5;
   static const double goCupY = 1205.5;
-  static const double goCupSize = 136; // patch corona 138×143 -> 136×140
-  static const double goCupH = 140;
+  static const double goCupSize = 136; // corona 118×101 (sfondo rimosso)
+  static const double goCupH = 117;
   static const double goBestX = 482;
   static const double goBestY = 1223;
   static const double btnGOResetX = 540.1;

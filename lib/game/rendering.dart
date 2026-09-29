@@ -362,12 +362,12 @@ extension GameRendering on BlockBlastGame {
       position: Vector2(Design.cupX - Design.cupSize / 2, Design.cupY - Design.cupH / 2),
       size: Vector2(Design.cupSize, Design.cupH),
     );
+    // Best score centrato SOTTO la corona (come il web, richiesta utente).
     final bestText = bestShown.toInt().toString();
-    final bestW = _measureGameText(bestText, 92);
     _drawGameText(
       canvas,
       bestText,
-      Design.bestScoreX + bestW / 2,
+      Design.cupX,
       Design.bestScoreY,
       92,
       BlockPalette.gold,
