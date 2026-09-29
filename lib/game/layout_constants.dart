@@ -32,30 +32,34 @@ class Design {
   static const double gridOriginY = 434; // spot(0,0) center y
   static const int gridSize = 8;
 
-  // === Tray (PlaceHolders) — 1:1: pezzi compatti al centro (x 538, y 1600) ===
+  // === Tray (PlaceHolders) — 1:1 web: slot fissi ben distanziati,
+  // niente pezzo attaccato (gap ampio tra i 3 slot) ===
   static const double trayY = 1600;
   static const double trayGap = 4;
   static const double trayCenterX = 538;
+  static const double traySlot0X = 190; // slot centers: 190 / 540 / 890
+  static const double traySlotStep = 350;
   static const double phSize = 250;
 
   // === HUD ===
   static const double txtScoreY = 243;
-  static const double cupX = 143;
+  static const double cupX = 111; // patch corona pulita 138×143 -> 158×164
   static const double cupY = 107;
-  static const double cupSize = 222; // patch crown 194×143 → 222×164
+  static const double cupSize = 158; // crown-only patch (senza lo 0 baked)
   static const double cupH = 164;
   static const double bestScoreX = 193; // bordo sinistro delle cifre best
   static const double bestScoreY = 138;
   static const double pauseBtnX = 981;
-  static const double pauseBtnY = 105;
+  static const double pauseBtnY = 115;
   static const double pauseBtnSize = 118; // hit box (squircle)
-  static const double pauseImgW = 198; // patch 173×174 (squircle 59.5%)
-  static const double pauseImgH = 198;
+  static const double pauseImgW = 190; // patch ricostruita 173×210
+  static const double pauseImgH = 230;
   static const double heartX = 540;
   static const double heartY = 210;
   static const double heartSize = 240;
 
-  // === Pause popup (layer positions, center-anchored) ===
+  // === Pause popup (layer positions, center-anchored) — 1:1 col web:
+  // toggle circolari (non pill schiacciate) + righe rispaziate ===
   static const double pausePopupX = 540;
   static const double pausePopupY = 960.5;
   static const double pausePopupW = 886;
@@ -64,21 +68,20 @@ class Design {
   static const double btnCloseY = 482;
   static const double btnCloseSize = 80;
   static const double btnSfxX = 794;
-  static const double btnSfxY = 654;
+  static const double btnSfxY = 655;
   static const double btnMusicX = 794;
-  static const double btnMusicY = 817;
-  static const double toggleW = 210;
-  static const double toggleH = 100;
+  static const double btnMusicY = 830;
+  static const double toggleSize = 165; // cerchi 165×165 (sprite quadrato 251×251)
   static const double btnHomeX = 761;
-  static const double btnHomeY = 994;
+  static const double btnHomeY = 1005;
   static const double btnHomeW = 282;
   static const double btnHomeH = 115;
   static const double btnResetX = 761;
-  static const double btnResetY = 1164;
+  static const double btnResetY = 1175;
   static const double btnResetW = 282;
   static const double btnResetH = 116;
   static const double btnShowRankingX = 761;
-  static const double btnShowRankingY = 1344;
+  static const double btnShowRankingY = 1345;
   static const double btnShowRankingW = 280;
   static const double btnShowRankingH = 114;
 
@@ -102,7 +105,8 @@ class Design {
   static const double goBestLabelY = 1113;
   static const double goCupX = 407.5;
   static const double goCupY = 1205.5;
-  static const double goCupSize = 140;
+  static const double goCupSize = 136; // patch corona 138×143 -> 136×140
+  static const double goCupH = 140;
   static const double goBestX = 482;
   static const double goBestY = 1223;
   static const double btnGOResetX = 540.1;

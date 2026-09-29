@@ -306,28 +306,25 @@ class BlockBlastGame extends FlameGame {
     }
   }
 
-  /// 1:1 reference: 3 pezzi COMPATTI al centro (cella 89px, gap 4px),
-  /// gruppo centrato a x 538 — come nello screenshot del gioco vero.
+  /// 1:1 web: 3 slot FISSI ben distanziati (190 / 540 / 890 a y 1600) —
+  /// i pezzi non si toccano mai; le forme larghe vengono compattate per
+  /// non invadere lo slot vicino (come nel web: clamp a 300px).
   Vector2 slotCenter(int i) {
-    double total = 0;
-    for (var s = 0; s < 3; s++) {
-      final slot = tray[s];
-      final shape = slot == null || slot.placed
-          ? const [[1]]
-          : kShapes[slot.shapeIdx];
-      total += (shape[0].length * Design.smallSize) + (s < 2 ? Design.trayGap : 0);
-    }
-    var cx = Design.trayCenterX - total / 2;
-    for (var s = 0; s <= i; s++) {
-      final slot = tray[s];
-      final shape = slot == null || slot.placed
-          ? const [[1]]
-          : kShapes[slot.shapeIdx];
-      final w = shape[0].length * Design.smallSize;
-      if (s < i) cx += w + Design.trayGap;
-      if (s == i) return Vector2(cx + w / 2, Design.trayY);
-    }
-    return Vector2(Design.trayCenterX, Design.trayY);
+    return Vector2(
+      Design.traySlot0X + i * Design.traySlotStep,
+      Design.trayY,
+    );
+  }
+
+  /// Scala di compattazione del pezzo nel vassoio: le forme larghe (>300px)
+  /// vengono ridotte per non sovrapporsi ai pezzi vicini.
+  double trayScaleFor(TraySlot? slot) {
+    if (slot == null || slot.placed) return 1.0;
+    final shape = kShapes[slot.shapeIdx];
+    final w = shape[0].length * Design.smallSize;
+    final h = shape.length * Design.smallSize;
+    final s = 1.0;
+    return s * .0 + math.min(1.0, math.min(300 / w, 300 / h));
   }
 
   // =====================================================================
@@ -1079,12 +1076,12 @@ class BlockBlastGame extends FlameGame {
             Design.btnCloseSize, Design.btnCloseSize)) {
           return 'pause_close';
         }
-        if (_contains(p, Design.btnSfxX, Design.btnSfxY, Design.toggleW,
-            Design.toggleH)) {
+        if (_contains(p, Design.btnSfxX, Design.btnSfxY, Design.toggleSize,
+            Design.toggleSize)) {
           return 'pause_sfx';
         }
-        if (_contains(p, Design.btnMusicX, Design.btnMusicY, Design.toggleW,
-            Design.toggleH)) {
+        if (_contains(p, Design.btnMusicX, Design.btnMusicY, Design.toggleSize,
+            Design.toggleSize)) {
           return 'pause_music';
         }
         if (_contains(p, Design.btnHomeX, Design.btnHomeY, Design.btnHomeW,

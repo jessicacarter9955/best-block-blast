@@ -211,7 +211,7 @@ extension GameRendering on BlockBlastGame {
 
       // Returning animation (0.3s, ease-out) + pop-in scale.
       var center = ph;
-      var scale = 1.0;
+      var scale = trayScaleFor(slot); // 1:1 web: clamp forme larghe
       if (dragReturnT >= 0 && i == returningSlot) {
         final t = dragReturnT.clamp(0.0, 1.0);
         final eased = 1 - (1 - t) * (1 - t);
@@ -219,9 +219,9 @@ extension GameRendering on BlockBlastGame {
           returnFrom.x + (ph.x - returnFrom.x) * eased,
           returnFrom.y + (ph.y - returnFrom.y) * eased,
         );
-        scale = 2.0 - eased; // shrink back to tray size
+        scale = (2.0 - eased) * trayScaleFor(slot); // shrink back to tray size
       } else if (slot.popT < 1) {
-        scale = slot.popT; // pop-in (0.3s, advanced in update)
+        scale = slot.popT * trayScaleFor(slot); // pop-in (0.3s, advanced in update)
       }
       _drawPiece(canvas, slot, center, scale, withShadow: true);
     }
@@ -599,7 +599,7 @@ extension GameRendering on BlockBlastGame {
     // Cup + best (left-anchored group at (482, 1223)).
     final cup = sprites.get('CupIcon');
     _drawSpriteCentered(
-      canvas, cup, Design.goCupX, Design.goCupY, Design.goCupSize, Design.goCupSize,
+      canvas, cup, Design.goCupX, Design.goCupY, Design.goCupSize, Design.goCupH,
     );
     final bestText = storage.bestScore.toString();
     final bestW = _measureGameText(bestText, 54);
@@ -636,11 +636,12 @@ extension GameRendering on BlockBlastGame {
       _drawSpriteCentered(canvas, sprites.get('BtnClose'),
           Design.btnCloseX, Design.btnCloseY, Design.btnCloseSize, Design.btnCloseSize);
       final sfxFrame = storage.sfxOn ? 0 : 1;
+      // 1:1 web: toggle CIRCOLARI 165×165 (non pill schiacciate)
       _drawSpriteCentered(canvas, sprites.get('BtnSFX', frame: sfxFrame),
-          Design.btnSfxX, Design.btnSfxY, Design.toggleW, Design.toggleH);
+          Design.btnSfxX, Design.btnSfxY, Design.toggleSize, Design.toggleSize);
       final musicFrame = storage.musicOn ? 0 : 1;
       _drawSpriteCentered(canvas, sprites.get('BtnMusic', frame: musicFrame),
-          Design.btnMusicX, Design.btnMusicY, Design.toggleW, Design.toggleH);
+          Design.btnMusicX, Design.btnMusicY, Design.toggleSize, Design.toggleSize);
       _drawSpriteCentered(canvas, sprites.get('BtnHome'),
           Design.btnHomeX, Design.btnHomeY, Design.btnHomeW, Design.btnHomeH);
       _drawSpriteCentered(canvas, sprites.get('BtnReset'),
