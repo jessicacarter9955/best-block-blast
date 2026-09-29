@@ -1,3 +1,68 @@
+import 'package:flutter/material.dart' show Color;
+
+/// Geometria Block Rush 1:1 — misurata pixel per pixel dai due screenshot
+/// reference dell'utente (home 942x1670 + gameplay 941x1672).
+/// La griglia (slot 0,0) parte a (74.5, 385); slot 115.8125 x 117.9375;
+/// frame board (bordo neon + interno) a (26,343)-(1045,1374).
+class Rush {
+  Rush._();
+
+  // === griglia ===
+  static const double gridX0 = 74.5;
+  static const double gridY0 = 385.0;
+  static const double pitchX = 115.8125;
+  static const double pitchY = 117.9375;
+  static const int gridSize = 8;
+  /// centro dello slot (r,c)
+  static double slotCx(int c) => gridX0 + pitchX * (c + 0.5);
+  static double slotCy(int r) => gridY0 + pitchY * (r + 0.5);
+
+  // === frame board ===
+  static const double frameL = 26.0;
+  static const double frameT = 343.0;
+  static const double frameW = 1019.0;
+  static const double frameH = 1031.0;
+
+  // === vassoio ===
+  static const double trayY = 1600.0;
+  static const List<double> trayX = [190, 540, 890];
+  static const double trayCell = 89.0;
+  static const double trayClamp = 310.0;
+
+  // === HUD ===
+  static const double scoreY = 254.0;
+  static const double crownX = 114.0;
+  static const double crownY = 131.5;
+  static const double crownW = 140.0;
+  static const double crownH = 125.0;
+  static const double bestY = 278.0;
+  static const double pauseX = 951.0;
+  static const double pauseY = 130.0;
+  static const double pauseSize = 123.0;
+
+  // === home ===
+  static const double playX = 541.0;
+  static const double playY = 1315.0;
+  static const double playW = 682.0;
+  static const double playH = 282.0;
+  static const double iconY = 1642.0;
+  static const List<double> iconX = [205, 550, 896];
+  static const double iconSize = 226.0;
+
+  // === palette candy viola (pannelli/pillole) ===
+  static const panelTop = Color(0xFF4A3499);
+  static const panelBottom = Color(0xFF150C36);
+  static const pillTop = Color(0xFF9F6BFF);
+  static const pillBottom = Color(0xFF5B2BD0);
+  static const strokeBlue = Color(0xFF1D4FE8);
+  static const glowBlue = Color(0xFF4D9BFF);
+  static const bestYellow = Color(0xFFFDF303);
+  static const bestStroke = Color(0xFF5A1A66);
+  static const medalGold = Color(0xFFFFD54A);
+  static const medalSilver = Color(0xFFD7DCE8);
+  static const medalBronze = Color(0xFFE8A05C);
+}
+
 /// Exact geometry constants of the original Block Blast (Construct 3).
 ///
 /// The original project uses a fixed 1080x1920 design. All values below were

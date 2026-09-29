@@ -41,6 +41,7 @@ class BlockBlastGame extends FlameGame {
 
   // === Assets & services ===
   late final SpriteCache sprites;
+  late final RushAssets rush;
   late final GameStorage storage;
   late final GameAudio audio;
   late final TutorialController tutorial;
@@ -131,15 +132,16 @@ class BlockBlastGame extends FlameGame {
   final List<Scheduled> _pending = [];
   int _scheduledSerial = 0;
 
-  /// Letterbox color matching the Block Rush background (flat #4E076D,
-  /// sampled from the real game).
+  /// Letterbox color matching the original background gradient's dark tone
+  /// (the original "Responsive" group extends the Bg over the whole screen).
   @override
-  Color backgroundColor() => const Color(0xFF4E076D);
+  Color backgroundColor() => const Color(0xFF2B3F7E);
 
   @override
   Future<void> onLoad() async {
     camera.viewfinder.position = Vector2(Design.width / 2, Design.height / 2);
     sprites = await SpriteCache.load();
+    rush = await RushAssets.load();
     scoreFont = BitmapFont.digits(sprites.get('txtScore'));
     earnedFont = BitmapFont.digitsPlus(sprites.get('txtEarnedScore'));
     comboFont = BitmapFont.comboBig(sprites.get('txtComboNum'));
@@ -306,26 +308,7 @@ class BlockBlastGame extends FlameGame {
     }
   }
 
-  /// 1:1 web: 3 slot FISSI ben distanziati (190 / 540 / 890 a y 1600) —
-  /// i pezzi non si toccano mai; le forme larghe vengono compattate per
-  /// non invadere lo slot vicino (come nel web: clamp a 300px).
-  Vector2 slotCenter(int i) {
-    return Vector2(
-      Design.traySlot0X + i * Design.traySlotStep,
-      Design.trayY,
-    );
-  }
-
-  /// Scala di compattazione del pezzo nel vassoio: le forme larghe (>300px)
-  /// vengono ridotte per non sovrapporsi ai pezzi vicini.
-  double trayScaleFor(TraySlot? slot) {
-    if (slot == null || slot.placed) return 1.0;
-    final shape = kShapes[slot.shapeIdx];
-    final w = shape[0].length * Design.smallSize;
-    final h = shape.length * Design.smallSize;
-    final s = 1.0;
-    return s * .0 + math.min(1.0, math.min(300 / w, 300 / h));
-  }
+  Vector2 slotCenter(int i) => Vector2(Rush.trayX[i], Rush.trayY);
 
   // =====================================================================
   //  Drag & drop (original "Dragging Blocks" group)
@@ -378,8 +361,8 @@ class BlockBlastGame extends FlameGame {
       for (var c = 0; c < cols; c++) {
         if (shape[r][c] == 0) continue;
         out.add(Vector2(
-          ph.x + (c - (cols - 1) / 2) * Design.smallSize,
-          ph.y + (r - (rows - 1) / 2) * Design.smallSize,
+          ph.x + (c - (cols - 1) / 2) * Rush.trayCell,
+          ph.y + (r - (rows - 1) / 2) * Rush.trayCell,
         ));
       }
     }
@@ -409,10 +392,10 @@ class BlockBlastGame extends FlameGame {
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         if (shape[r][c] == 0) continue;
-        final bx = dragPos.x + (c - (cols - 1) / 2) * Design.bigSize;
-        final by = dragPos.y + (r - (rows - 1) / 2) * Design.bigSize;
-        final gx = ((bx - Design.gridOriginX) / Design.bigSize).round();
-        final gy = ((by - Design.gridOriginY) / Design.bigSize).round();
+        final bx = dragPos.x + (c - (cols - 1) / 2) * Rush.pitchX;
+        final by = dragPos.y + (r - (rows - 1) / 2) * Rush.pitchY;
+        final gx = ((bx - Rush.slotCx(0)) / Rush.pitchX).round();
+        final gy = ((by - Rush.slotCy(0)) / Rush.pitchY).round();
         if (gx < 0 || gx >= Design.gridSize || gy < 0 || gy >= Design.gridSize) {
           return;
         }
@@ -564,14 +547,14 @@ class BlockBlastGame extends FlameGame {
       }
       lineFx.add(LineFx(
         horizontal: true,
-        pos: Design.gridOriginY + y * Design.bigSize,
+        pos: Rush.slotCy(y),
         color: color,
       ));
       // Original: the squares spawn after Wait(0.2).
       after(0.2, () {
         _spawnSquareEffects(
-          Design.boardX,
-          Design.gridOriginY + y * Design.bigSize,
+          Rush.frameL + Rush.frameW / 2,
+          Rush.slotCy(y),
           horizontal: true,
           color: color,
         );
@@ -583,14 +566,14 @@ class BlockBlastGame extends FlameGame {
       }
       lineFx.add(LineFx(
         horizontal: false,
-        pos: Design.gridOriginX + x * Design.bigSize,
+        pos: Rush.slotCx(x),
         color: color,
       ));
       // Original: the squares spawn after Wait(0.2).
       after(0.2, () {
         _spawnSquareEffects(
-          Design.gridOriginX + x * Design.bigSize,
-          Design.boardY,
+          Rush.slotCx(x),
+          Rush.frameT + Rush.frameH / 2,
           horizontal: false,
           color: color,
         );
@@ -923,9 +906,10 @@ class BlockBlastGame extends FlameGame {
       ns.t += dt;
     }
 
-    // Drag piece scale-in.
+    // Drag piece scale-in (1:1 reference: nessun ingrandimento alla presa —
+    // il pezzo resta della dimensione del vassoio).
     if (dragSlot >= 0) {
-      dragScale = math.min(2.0, dragScale + dt * 8);
+      dragScale = 1.0;
     }
 
     // Piece return animation (0.3s).
@@ -1035,66 +1019,58 @@ class BlockBlastGame extends FlameGame {
     switch (state) {
       case GameState.home:
         if (rankingData != null) {
-          if (_contains(p, Design.lbCloseX, Design.lbCloseY,
-              Design.lbCloseSize, Design.lbCloseSize)) {
+          if (_contains(p, 850, 315, 90, 90)) {
             return 'ranking_close';
           }
           return null;
         }
-        if (_contains(p, Design.btnPlayX, Design.btnPlayY, Design.btnPlayW,
-            Design.btnPlayH)) {
+        if (_contains(p, Rush.playX, Rush.playY, Rush.playW,
+            Rush.playH)) {
           return 'home_play';
         }
-        if (_contains(p, 539, Design.homeBtnY, Design.homeBtnSize,
-            Design.homeBtnSize)) {
+        if (_contains(p, Rush.iconX[1], Rush.iconY, Rush.iconSize,
+            Rush.iconSize)) {
           return 'home_ranking';
         }
-        if (_contains(p, Design.homeMusicX, Design.homeBtnY, Design.homeBtnSize,
-            Design.homeBtnSize)) {
+        if (_contains(p, Rush.iconX[2], Rush.iconY, Rush.iconSize,
+            Rush.iconSize)) {
           return 'home_music';
         }
-        if (_contains(p, Design.homeSfxX, Design.homeBtnY, Design.homeBtnSize,
-            Design.homeBtnSize)) {
+        if (_contains(p, Rush.iconX[0], Rush.iconY, Rush.iconSize,
+            Rush.iconSize)) {
           return 'home_sfx';
         }
         return null;
       case GameState.hud:
-        if (_contains(p, Design.pauseBtnX, Design.pauseBtnY,
-            Design.pauseBtnSize, Design.pauseBtnSize)) {
+        if (_contains(p, Rush.pauseX, Rush.pauseY,
+            Rush.pauseSize, Rush.pauseSize)) {
           return 'hud_pause';
         }
         return null;
       case GameState.pause:
         if (rankingData != null) {
-          if (_contains(p, Design.lbCloseX, Design.lbCloseY,
-              Design.lbCloseSize, Design.lbCloseSize)) {
+          if (_contains(p, 850, 315, 90, 90)) {
             return 'ranking_close';
           }
           return null;
         }
-        if (_contains(p, Design.btnCloseX, Design.btnCloseY,
-            Design.btnCloseSize, Design.btnCloseSize)) {
+        if (_contains(p, 899, 482, 96, 96)) {
           return 'pause_close';
         }
-        if (_contains(p, Design.btnSfxX, Design.btnSfxY, Design.toggleSize,
-            Design.toggleSize)) {
+        if (_contains(p, 420, 800, 190, 190)) {
           return 'pause_sfx';
         }
-        if (_contains(p, Design.btnMusicX, Design.btnMusicY, Design.toggleSize,
-            Design.toggleSize)) {
+        if (_contains(p, 660, 800, 190, 190)) {
           return 'pause_music';
         }
-        if (_contains(p, Design.btnHomeX, Design.btnHomeY, Design.btnHomeW,
-            Design.btnHomeH)) {
-          return 'pause_home';
-        }
-        if (_contains(p, Design.btnResetX, Design.btnResetY, Design.btnResetW,
-            Design.btnResetH)) {
+        if (_contains(p, 540, 1022, 560, 132)) {
           return 'pause_reset';
         }
-        if (_contains(p, Design.btnShowRankingX, Design.btnShowRankingY,
-            Design.btnShowRankingW, Design.btnShowRankingH)) {
+        if (_contains(p, 540, 1180, 560, 132)) {
           return 'pause_ranking';
+        }
+        if (_contains(p, 540, 1338, 560, 132)) {
+          return 'pause_home';
         }
         return null;
       case GameState.revive:
@@ -1110,8 +1086,7 @@ class BlockBlastGame extends FlameGame {
         }
         return null;
       case GameState.ranking:
-        if (_contains(p, Design.lbCloseX, Design.lbCloseY, Design.lbCloseSize,
-            Design.lbCloseSize)) {
+        if (_contains(p, 850, 315, 90, 90)) {
           return 'ranking_close';
         }
         return null;
@@ -1218,18 +1193,15 @@ class NoSpaceBanner {
 class RgbColor {
   RgbColor(this.r, this.g, this.b);
   factory RgbColor.fromColor(int blockFrameIdx) {
-    // Block Rush palette (sampled from the real game screenshot), same
-    // frame order as the Block sprites: viola, ciano, verde, blu, giallo,
-    // arancio, rosso, magenta.
     const values = [
-      (136, 72, 224),
-      (0, 192, 192),
-      (1, 197, 1),
-      (0, 144, 248),
-      (248, 208, 0),
-      (200, 125, 0),
-      (196, 10, 10),
-      (196, 10, 196),
+      (139, 95, 215),
+      (54, 178, 225),
+      (59, 180, 59),
+      (72, 100, 231),
+      (237, 182, 50),
+      (237, 120, 33),
+      (201, 49, 49),
+      (211, 95, 215),
     ];
     final v = values[blockFrameIdx.clamp(0, 7)];
     return RgbColor(v.$1, v.$2, v.$3);
