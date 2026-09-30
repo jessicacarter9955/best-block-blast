@@ -1,12 +1,10 @@
-# Block Rush 1:1 — Native Flutter port (pixel perfect)
+# Block Rush — Flutter + Flame
 
 A native Flutter port of the **Block Rush** puzzle game using the **Flame**
 game engine. No WebView — the game logic, rendering, audio, and UI are all
-native Dart code. This is the **1:1 pixel perfect** version: same mechanics,
-same layout coordinates (1080×1920 design), same scoring, combo, tutorial and
-ranking logic — with the Block Rush art direction (flat #4E076D purple
-background, uniform #2A0139 board, glossy 3-band blocks with colors sampled
-from the real game, lavender UI buttons).
+native Dart code. The current version uses a blue-and-gold UI, high-resolution crown, faceted jewel effects and verified playable trays with a visible solution. If a move strands the remaining tray, unused pieces are refreshed without changing the board or score.
+
+See [release readiness](docs/RELEASE-READINESS.md) and [UI update](docs/UI-UPDATE.md) for current behavior, previews and distribution requirements.
 
 > This repository ships **only the Block Rush 1:1 version** — no other skin
 > variants are included. Every push to `master` builds a **release APK**
@@ -23,7 +21,7 @@ flutter-app/
 │       ├── block_blast_game.dart        Main FlameGame: state machine
 │       │                                (home/hud/pause/revive/gameOver/
 │       │                                ranking/waiting), 8×8 board, tray,
-│       │                                drag-drop with ×2 scale and −200px
+│       │                                drag-drop with board-cell scale and −200px
 │       │                                lift, line clearing, combo/heart,
 │       │                                score count-up, revive countdown,
 │       │                                game-over flow, screen shake.

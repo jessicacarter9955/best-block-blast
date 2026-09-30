@@ -70,7 +70,7 @@ class BitmapFont {
     final paint = Paint()..filterQuality = FilterQuality.medium;
     if (opacity < 1) {
       paint.colorFilter = ColorFilter.mode(
-        const Color(0xFFFFFFFF).withOpacity(opacity),
+        const Color(0xFFFFFFFF).withValues(alpha: opacity),
         BlendMode.dstIn,
       );
     }

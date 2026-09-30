@@ -13,6 +13,7 @@ class Rush {
   static const double pitchX = 115.8125;
   static const double pitchY = 117.9375;
   static const int gridSize = 8;
+
   /// centro dello slot (r,c)
   static double slotCx(int c) => gridX0 + pitchX * (c + 0.5);
   static double slotCy(int r) => gridY0 + pitchY * (r + 0.5);

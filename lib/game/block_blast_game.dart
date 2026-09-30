@@ -1,3 +1,4 @@
+import 'fair_deal.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:ui' show Canvas, Color;
@@ -156,7 +157,7 @@ class BlockBlastGame extends FlameGame {
     await audio.init();
     bestShown = storage.bestScore.toDouble();
     await world.add(GameCanvas(this));
-    if (['combo', 'revive', 'gameover'].contains(previewScene)) {
+    if (['combo', 'revive', 'gameover', 'fair'].contains(previewScene)) {
       state = previewScene == 'revive'
           ? GameState.revive
           : previewScene == 'gameover'
@@ -165,13 +166,18 @@ class BlockBlastGame extends FlameGame {
       score = 2480;
       goScoreShown = 2480;
       scoreShown = 2480;
-      blackBgOpacity = previewScene == 'combo' ? 0 : 0.75;
+      blackBgOpacity = ['combo', 'fair'].contains(previewScene) ? 0 : 0.75;
       reviveText = 10;
       for (var y = 4; y < 8; y++) {
         for (var x = 0; x < 8; x++) {
           if ((x + y) % 3 != 0) grid[y][x] = (x + y) % 8;
         }
       }
+      createShapes();
+      for (final slot in tray) {
+        slot?.popT = 1;
+      }
+      showSolution = previewScene == 'fair';
     }
   }
 
@@ -216,6 +222,10 @@ class BlockBlastGame extends FlameGame {
     comboDisplay = null;
     earnedDisplay = null;
     noSpaceBanner = null;
+    placementPending = false;
+    solution = [];
+    showSolution = false;
+    fairRefreshed = false;
     settleCells.clear();
     dragSlot = -1;
     returningSlot = -1;
@@ -246,26 +256,34 @@ class BlockBlastGame extends FlameGame {
   /// Original "CreateShapes": pool of 5 placeable shapes, 3 distinct picks,
   /// 3 distinct colors popped from a shuffled 0..7 list.
   void createShapes({bool revive = false}) {
-    if (!revive || shapePool.length < 3) {
-      getAvailableShapes();
-    }
+    solution = dealFair(grid.expand((r) => r).toList(), [0, 1, 2], rng);
     final colors = List<int>.generate(8, (i) => i)..shuffle(rng);
-    for (var i = 0; i < 3; i++) {
-      int shapeIdx;
-      if (shapePool.isNotEmpty) {
-        shapeIdx = shapePool[rng.nextInt(shapePool.length)];
-        // Keep the pool at >= 3 so tray shapes stay distinct (original rule).
-        if (shapePool.length >= 3) {
-          shapePool.remove(shapeIdx);
-        }
-      } else {
-        shapeIdx = rng.nextInt(kShapes.length);
+    for (final move in solution) {
+      tray[move.slot] = TraySlot(move.shape, colors[move.slot]);
+      _spawnPopEffects(move.slot);
+    }
+    fairRefreshed = false;
+  }
+
+  List<FairMove> solution = [];
+  bool showSolution = false;
+  bool fairRefreshed = false;
+  bool placementPending = false;
+
+  void ensureFairContinuation() {
+    final board = grid.expand((r) => r).toList();
+    final remaining = <int, int>{
+      for (var i = 0; i < tray.length; i++)
+        if (tray[i] != null && !tray[i]!.placed) i: tray[i]!.shapeIdx,
+    };
+    final found = solveFair(board, remaining);
+    fairRefreshed = found == null;
+    solution = found ?? dealFair(board, remaining.keys.toList(), rng);
+    if (fairRefreshed) {
+      for (final move in solution) {
+        tray[move.slot] = TraySlot(move.shape, tray[move.slot]!.colorIdx);
+        _spawnPopEffects(move.slot);
       }
-      final colorIdx = colors.isEmpty
-          ? rng.nextInt(8)
-          : colors.removeAt(rng.nextInt(colors.length));
-      tray[i] = TraySlot(shapeIdx, colorIdx);
-      _spawnPopEffects(i);
     }
   }
 
@@ -370,6 +388,7 @@ class BlockBlastGame extends FlameGame {
   final Vector2 finger = Vector2.zero();
 
   void onDragStart(Vector2 p) {
+    if (placementPending) return;
     if (state != GameState.hud) return;
     if (dragSlot >= 0) return;
     pressedButton = null;
@@ -530,6 +549,8 @@ class BlockBlastGame extends FlameGame {
   }
 
   void _placeDraggedPiece(TraySlot slot) {
+    placementPending = true;
+    solution = [];
     final colorIdx = slot.colorIdx;
     final blockCount = dragTargets.length;
     for (final cell in dragTargets) {
@@ -659,15 +680,15 @@ class BlockBlastGame extends FlameGame {
       {required bool horizontal, required RgbColor color}) {
     for (var i = 0; i < 24; i++) {
       final along = (rng.nextDouble() - 0.5) * 820;
-      final angle = rng.nextDouble() * math.pi * 2;
-      final speed = 100 + rng.nextDouble() * 210;
-      final jewelColor = RgbColor.fromColor([0, 1, 5, 7][i % 4]);
+      final side = i.isEven ? -1.0 : 1.0;
+      final speed = 140 + rng.nextDouble() * 240;
+      final jewelColor = RgbColor.fromColor([0, 1, 2, 5, 7, 3][i % 6]);
       squares.add(SquareFx(
           horizontal ? x + along : x,
           horizontal ? y : y + along,
-          math.cos(angle) * speed,
-          math.sin(angle) * speed - 70,
-          25 + rng.nextDouble() * 31,
+          horizontal ? side * speed : (rng.nextDouble() - .5) * 180,
+          horizontal ? -60 - rng.nextDouble() * 200 : side * speed,
+          34 + rng.nextDouble() * 38,
           jewelColor,
           1));
     }
@@ -709,6 +730,7 @@ class BlockBlastGame extends FlameGame {
   // =====================================================================
 
   void _advanceFlow() {
+    placementPending = false;
     if (tutorial.active) {
       switch (tutorial.tutNum) {
         case 1:
@@ -737,9 +759,7 @@ class BlockBlastGame extends FlameGame {
       final delay = lineFx.isNotEmpty ? 0.5 : 0.0;
       after(delay, () => createShapes());
     } else {
-      if (!anyRemainingFits()) {
-        gameOverStart();
-      }
+      ensureFairContinuation();
     }
   }
 
@@ -907,6 +927,10 @@ class BlockBlastGame extends FlameGame {
           _spawnSquareEffects(540, 1060,
               horizontal: true, color: RgbColor.fromColor(1));
         }
+        lineFx.clear();
+        lineFx.add(
+            LineFx(horizontal: true, pos: 1060, color: RgbColor.fromColor(1))
+              ..t = t);
         for (final g in squares) {
           g.t = t;
         }
@@ -938,7 +962,7 @@ class BlockBlastGame extends FlameGame {
     // Score counters chase their targets (smooth count-up).
     scoreShown += (score - scoreShown) * math.min(1, dt * 6);
     if ((score - scoreShown).abs() < 0.5) scoreShown = score.toDouble();
-    if (score > storage.bestScore) {
+    if (previewScene == null && score > storage.bestScore) {
       storage.setBestScore(score);
     }
     bestShown += (storage.bestScore - bestShown) * math.min(1, dt * 6);
@@ -1068,6 +1092,9 @@ class BlockBlastGame extends FlameGame {
       case 'home_sfx':
         storage.setSfx(!storage.sfxOn);
         break;
+      case 'hud_solution':
+        showSolution = !showSolution;
+        break;
       case 'hud_pause':
         pauseOpen();
         break;
@@ -1138,6 +1165,9 @@ class BlockBlastGame extends FlameGame {
         }
         return null;
       case GameState.hud:
+        if (!tutorial.active && _contains(p, 540, 1820, 540, 88)) {
+          return 'hud_solution';
+        }
         if (_contains(p, Design.pauseBtnX, Design.pauseBtnY,
             Design.pauseBtnSize, Design.pauseBtnSize)) {
           return 'hud_pause';

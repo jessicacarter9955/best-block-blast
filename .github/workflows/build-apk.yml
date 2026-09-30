@@ -54,6 +54,9 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      - name: Test fair deals and drag geometry
+        run: flutter test
+
       - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons
 

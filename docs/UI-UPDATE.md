@@ -25,3 +25,10 @@ flutter run -d web-server --web-hostname 127.0.0.1 --web-port 5173
 ```
 
 The additional `block-rush` repository is a separate Next.js project at `C:/Users/jessi/Downloads/block-rush`; start it with `npm run dev -- --hostname 127.0.0.1` (port 3000).
+
+
+## Corona HD (30 settembre 2026)
+
+Tool ImageGen integrato, modifica della corona originale `assets/rush/crown.png`. Output finale `assets/rush/crown-hd.png`, copiato anche nel recorder in `public/textures/rush/crown-hd.png`. PNG trasparente 1280×1280.
+
+Prompt: Recreate ONLY the original golden crown at crisp high resolution, retaining its friendly rounded 3D silhouette, three gold spherical tips, tall central spike, glossy gold body, double rounded elliptical gold base rim and little white star highlight over center tip. Preserve original proportions and front perspective. Remove ALL blue/purple background and external glow; genuinely transparent background, clean antialiasing. Crown centered fills 90% of canvas. No additional gems, no text, no badge, no outline box. Keep this close to original crown; improve sharpness and smooth metallic gold gradients.

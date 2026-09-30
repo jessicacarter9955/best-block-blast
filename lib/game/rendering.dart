@@ -23,6 +23,7 @@ extension GameRendering on BlockBlastGame {
     _drawTray(canvas);
     _drawTutorialHint(canvas);
     _drawHud(canvas);
+    _drawFairHint(canvas);
     _drawBlackBg(canvas);
     _drawNoSpaceBanner(canvas);
     _drawReviveOverlay(canvas);
@@ -34,6 +35,64 @@ extension GameRendering on BlockBlastGame {
   // =====================================================================
   //  Background (original: Bg tiled gradient + Responsive)
   // =====================================================================
+
+  void _drawFairHint(Canvas canvas) {
+    if (tutorial.active || state != GameState.hud) return;
+    _actionButton(
+        canvas,
+        'hud_solution',
+        showSolution ? 'NASCONDI AIUTO' : 'SOLUZIONE',
+        Icons.lightbulb_outline,
+        540,
+        1820,
+        540,
+        88,
+        labelSize: 32);
+    if (fairRefreshed) {
+      _uiText(
+          canvas, 'Pezzi aggiornati: c’è sempre una soluzione', 540, 1895, 26,
+          color: const Color(0xFF9BEFFF));
+    }
+    if (!showSolution || solution.isEmpty || dragSlot >= 0) return;
+    final move = solution.first;
+    final shape = kShapes[move.shape];
+    final paint = Paint()..color = const Color(0x704FFFE1);
+    for (var r = 0; r < shape.length; r++) {
+      for (var c = 0; c < shape[r].length; c++) {
+        if (shape[r][c] == 0) continue;
+        final x = Design.gridOriginX + (move.col + c) * Design.bigSize;
+        final y = Design.gridOriginY + (move.row + r) * Design.cellHeight;
+        final rect = Rect.fromCenter(
+            center: Offset(x, y),
+            width: Design.bigSize - 8,
+            height: Design.cellHeight - 8);
+        canvas.drawRect(rect, paint);
+        canvas.drawRect(
+            rect,
+            Paint()
+              ..color = const Color(0xFFAAFFF0)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 4);
+      }
+    }
+    final center = slotCenter(move.slot);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            Rect.fromCenter(
+                center: Offset(center.x, center.y), width: 326, height: 326),
+            const Radius.circular(22)),
+        Paint()
+          ..color = const Color(0xFFAAFFF0)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4);
+    _uiText(
+        canvas,
+        'Pezzo ${move.slot + 1} → celle luminose · ${solution.length} mosse verificate',
+        540,
+        1408,
+        29,
+        color: const Color(0xFFBAFFF2));
+  }
 
   void _drawBackground(Canvas canvas) {
     // 1:1: la home usa lo sfondo bokeh della home di riferimento, il gameplay
@@ -61,6 +120,35 @@ extension GameRendering on BlockBlastGame {
     // 1:1: l'interno della board (celle + separatori) è già dentro lo sprite
     // Board — nessuno Spot da disegnare sopra.
 
+    // Draw every slot explicitly; screenshot-derived art had merged cells.
+    canvas.drawRect(
+        Rect.fromLTWH(
+            Rush.gridX0, Rush.gridY0, Rush.pitchX * 8, Rush.pitchY * 8),
+        Paint()..color = const Color(0xFF050E32));
+    for (var r = 0; r < 8; r++) {
+      for (var c = 0; c < 8; c++) {
+        final rect = Rect.fromCenter(
+            center: Offset(Rush.slotCx(c), Rush.slotCy(r)),
+            width: Rush.pitchX * .93,
+            height: Rush.pitchY * .93);
+        final slot = RRect.fromRectAndRadius(rect, const Radius.circular(14));
+        canvas.drawRRect(
+            slot,
+            Paint()
+              ..shader = const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF12265B), Color(0xFF0A1755)])
+                  .createShader(rect));
+        canvas.drawRRect(
+            slot,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2
+              ..color = const Color(0xFF1C3263));
+      }
+    }
+
     // Drag preview: BlockBelow (30% opacity, piece color) on target cells.
     if (dragSlot >= 0 && dragValid && dragTargets.isNotEmpty) {
       final slot = tray[dragSlot]!;
@@ -72,7 +160,8 @@ extension GameRendering on BlockBlastGame {
         final cy = Design.gridOriginY + cell.y * Design.cellHeight;
         preview.render(
           canvas,
-          position: Vector2(cx - Design.bigSize / 2, cy - Design.cellHeight / 2),
+          position:
+              Vector2(cx - Design.bigSize / 2, cy - Design.cellHeight / 2),
           size: Vector2(Design.bigSize, Design.cellHeight),
         );
       }
@@ -107,7 +196,8 @@ extension GameRendering on BlockBlastGame {
         }
         block.render(
           canvas,
-          position: Vector2(cx - Design.bigSize / 2, cy - Design.cellHeight / 2),
+          position:
+              Vector2(cx - Design.bigSize / 2, cy - Design.cellHeight / 2),
           size: Vector2(Design.bigSize, Design.cellHeight),
         );
         if (settle != null && settle < 1) {
@@ -122,7 +212,6 @@ extension GameRendering on BlockBlastGame {
     }
 
     // Faceted jewels with short luminous trails, inspired by the home art.
-    final squarePaint = Paint();
     for (var i = 0; i < squares.length; i++) {
       final g = squares[i];
       final t = g.t.clamp(0.0, 1.0);
@@ -153,24 +242,11 @@ extension GameRendering on BlockBlastGame {
       canvas.restore();
     }
 
-    // Spawn particles (white-ish dots from piece creation).
+    // Sharp glints at spawn; no circular pulse or bubble particles.
     for (final p in particles) {
       final alpha = (1 - p.t / p.life).clamp(0.0, 1.0);
-      squarePaint.color = Color.fromRGBO(255, 255, 255, alpha * 0.8);
-      canvas.drawCircle(
-          _off(p.x, p.y), 6 * (1 - p.t / p.life) + 2, squarePaint);
-    }
-
-    // Circle glow bursts at piece spawn (original CircleGlow: scale 0 -> 300,
-    // opacity 0 -> 30).
-    for (final g in glowBursts) {
-      final t = (g.t / 0.4).clamp(0.0, 1.0);
-      final radius = 300 * t;
-      final alpha = 30 * (1 - t) / 100;
-      final paint = Paint()
-        ..color = const Color(0xFFFFFFFF).withValues(alpha: alpha)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
-      canvas.drawCircle(_off(g.x, g.y), radius, paint);
+      _sparkle(canvas, p.x, p.y, 5 + 9 * alpha,
+          Color.fromRGBO(172, 243, 255, alpha));
     }
   }
 
@@ -178,45 +254,48 @@ extension GameRendering on BlockBlastGame {
   /// opacity 30 -> 100, width -> board-45, then height -> 120, then fade out.
   void _drawLineEffect(Canvas canvas, LineFx fx) {
     final t = fx.t;
-    final length = (Design.boardSize - 45) * math.min(1.0, t / 0.1);
-    var opacity = 0.30 + 0.70 * math.min(1.0, t / 0.1);
-    var height = 25.0;
-    if (t > 0.1 && t < 0.3) {
-      height = 25 + (Design.bigSize - 25) * ((t - 0.1) / 0.08).clamp(0.0, 1.0);
-    } else if (t >= 0.3) {
-      height = Design.bigSize.toDouble();
-      opacity = (1 - (t - 0.3) / 0.2).clamp(0.0, 1.0);
+    if (t >= 0.8) return;
+    final alpha = (1 - t / 0.8).clamp(0.0, 1.0);
+    final length = Design.boardSize * math.min(1.0, t / 0.12);
+    final h = 18 + 55 * math.sin(math.min(1.0, t / 0.8) * math.pi);
+    canvas.save();
+    canvas.translate(fx.horizontal ? Design.boardX : fx.pos,
+        fx.horizontal ? fx.pos : Design.boardY);
+    if (!fx.horizontal) canvas.rotate(math.pi / 2);
+    final rect = Rect.fromCenter(center: Offset.zero, width: length, height: h);
+    final path = Path()
+      ..moveTo(-length / 2, 0)
+      ..lineTo(-length / 2 + 35, -h / 2)
+      ..lineTo(length / 2 - 35, -h / 2)
+      ..lineTo(length / 2, 0)
+      ..lineTo(length / 2 - 35, h / 2)
+      ..lineTo(-length / 2 + 35, h / 2)
+      ..close();
+    canvas.saveLayer(
+        null, Paint()..color = Color.fromRGBO(255, 255, 255, alpha));
+    canvas.drawPath(
+        path,
+        Paint()
+          ..shader = const LinearGradient(colors: [
+            Color(0xFF724AFF),
+            Color(0xFF00E6FF),
+            Color(0xFFFFFFFF),
+            Color(0xFFFF55E1),
+            Color(0xFFFFBC39)
+          ]).createShader(rect));
+    canvas.drawLine(
+        Offset(-length / 2, 0),
+        Offset(length / 2, 0),
+        Paint()
+          ..color = const Color(0xFFFFFFFF)
+          ..strokeWidth = 3);
+    for (var i = 0; i < 7; i++) {
+      final x = -length / 2 + length * (i / 6);
+      _sparkle(canvas, x, (i.isEven ? -1 : 1) * h * .65, 9 + 6 * alpha,
+          i.isEven ? const Color(0xFF78F8FF) : const Color(0xFFFFCBF3));
     }
-    if (opacity <= 0) return;
-    final paint = Paint()
-      ..color = Color.fromRGBO(fx.color.r, fx.color.g, fx.color.b, opacity);
-    final glow = Paint()
-      ..color =
-          Color.fromRGBO(fx.color.r, fx.color.g, fx.color.b, opacity * 0.5)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24);
-    if (fx.horizontal) {
-      final y = fx.pos;
-      final rect = Rect.fromCenter(
-        center: _off(Design.boardX, y),
-        width: length,
-        height: height,
-      );
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(rect, const Radius.circular(12)), glow);
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(rect, const Radius.circular(12)), paint);
-    } else {
-      final x = fx.pos;
-      final rect = Rect.fromCenter(
-        center: _off(x, Design.boardY),
-        width: height,
-        height: length,
-      );
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(rect, const Radius.circular(12)), glow);
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(rect, const Radius.circular(12)), paint);
-    }
+    canvas.restore();
+    canvas.restore();
   }
 
   // =====================================================================
@@ -417,12 +496,31 @@ extension GameRendering on BlockBlastGame {
         null, Paint()..color = Color.fromRGBO(255, 255, 255, opacity));
     canvas.translate(540, 780);
     canvas.scale(scale);
-    for (var i = 0; i < 8; i++) {
-      final angle = i * math.pi / 4 + t * 0.6;
-      final x = math.cos(angle) * 285, y = math.sin(angle) * 118;
-      _gem(canvas, x, y, 22 + (i % 3) * 7,
-          i.isEven ? const Color(0xFF59E7FF) : const Color(0xFFFFD05A));
-      _sparkle(canvas, x + 15, y - 22, 8, const Color(0xFFFFFFFF));
+    const spots = [
+      Offset(-295, -90),
+      Offset(284, -64),
+      Offset(-310, 95),
+      Offset(309, 125),
+      Offset(-240, -143),
+      Offset(245, 162)
+    ];
+    const colors = [
+      Color(0xFF09DEFF),
+      Color(0xFFFF45CF),
+      Color(0xFFB354FF),
+      Color(0xFFFFC32B),
+      Color(0xFF45F2A6),
+      Color(0xFF6688FF)
+    ];
+    for (var i = 0; i < spots.length; i++) {
+      final p = spots[i];
+      final x = p.dx + (i.isEven ? -1 : 1) * t * 25, y = p.dy - t * 30;
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate((i.isEven ? -.3 : .35));
+      _gem(canvas, 0, 0, 44 + (i % 3) * 12, colors[i]);
+      canvas.restore();
+      _sparkle(canvas, x + 24, y - 30, 10, const Color(0xFFFFFFFF));
     }
     _drawGameText(canvas, 'COMBO', 0, -38, 94, const Color(0xFFFFFFFF),
         const Color(0xFF592DB3), 10);
@@ -451,9 +549,10 @@ extension GameRendering on BlockBlastGame {
     canvas.scale(scale);
     _drawGameText(canvas, text, 0, 0, size, const Color(0xFFFFF0A6),
         const Color(0xFF55318F), 8);
-    if (ed.lines >= 2)
+    if (ed.lines >= 2) {
       _uiText(canvas, ed.lines >= 3 ? 'BRILLIANT!' : 'DAZZLING!', 0, 92, 38,
           title: true, color: const Color(0xFF8EF1FF));
+    }
     canvas.restore();
   }
 
@@ -723,93 +822,96 @@ extension GameRendering on BlockBlastGame {
     canvas.translate(x, y);
     canvas.scale(size / 100);
     final outline = Path()
-      ..moveTo(-34, -42)
-      ..lineTo(32, -42)
-      ..lineTo(50, -16)
-      ..lineTo(0, 52)
-      ..lineTo(-50, -16)
+      ..moveTo(-28, -46)
+      ..lineTo(26, -46)
+      ..lineTo(46, -25)
+      ..lineTo(46, 26)
+      ..lineTo(24, 47)
+      ..lineTo(-28, 47)
+      ..lineTo(-47, 25)
+      ..lineTo(-47, -24)
       ..close();
+    canvas.drawPath(outline, Paint()..color = color);
+    void facet(List<Offset> points, Color fill) {
+      final p = Path()..addPolygon(points, true);
+      canvas.drawPath(p, Paint()..color = fill);
+    }
+
+    facet([
+      const Offset(-28, -46),
+      const Offset(26, -46),
+      const Offset(17, -27),
+      const Offset(-18, -27)
+    ], Color.lerp(color, const Color(0xFFFFFFFF), .72)!);
+    facet([
+      const Offset(-47, -24),
+      const Offset(-28, -46),
+      const Offset(-18, -27),
+      const Offset(-28, -15),
+      const Offset(-28, 16),
+      const Offset(-47, 25)
+    ], Color.lerp(color, const Color(0xFFFFFFFF), .38)!);
+    facet([
+      const Offset(26, -46),
+      const Offset(46, -25),
+      const Offset(46, 26),
+      const Offset(27, 16),
+      const Offset(27, -15),
+      const Offset(17, -27)
+    ], Color.lerp(color, const Color(0xFF23105E), .44)!);
+    facet([
+      const Offset(-47, 25),
+      const Offset(-28, 47),
+      const Offset(24, 47),
+      const Offset(46, 26),
+      const Offset(27, 16),
+      const Offset(15, 28),
+      const Offset(-17, 28),
+      const Offset(-28, 16)
+    ], Color.lerp(color, const Color(0xFF170B50), .55)!);
+    final center = Path()
+      ..addPolygon([
+        const Offset(-18, -27),
+        const Offset(17, -27),
+        const Offset(27, -15),
+        const Offset(27, 16),
+        const Offset(15, 28),
+        const Offset(-17, 28),
+        const Offset(-28, 16),
+        const Offset(-28, -15)
+      ], true);
     canvas.drawPath(
-        outline,
+        center,
         Paint()
           ..shader = LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color.lerp(color, const Color(0xFFFFFFFF), 0.6)!,
+                Color.lerp(color, const Color(0xFFFFFFFF), .45)!,
                 color,
-                Color.lerp(color, const Color(0xFF381373), 0.6)!
-              ]).createShader(const Rect.fromLTWH(-50, -42, 100, 94)));
-    final facets = Path()
-      ..moveTo(-34, -42)
-      ..lineTo(-21, -13)
-      ..lineTo(0, 52)
-      ..lineTo(21, -13)
-      ..lineTo(32, -42)
-      ..moveTo(-50, -16)
-      ..lineTo(50, -16)
-      ..moveTo(-21, -13)
-      ..lineTo(0, -42)
-      ..lineTo(21, -13);
+                Color.lerp(color, const Color(0xFF4617A3), .3)!
+              ]).createShader(const Rect.fromLTWH(-28, -27, 55, 55)));
     canvas.drawPath(
-        facets,
+        center,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..color = const Color(0x99FFFFFF));
-    canvas.drawPath(
-        outline,
+          ..strokeWidth = 1.5
+          ..color = const Color(0x90FFFFFF));
+    canvas.drawLine(
+        const Offset(-28, -46),
+        const Offset(26, -46),
         Paint()
-          ..style = PaintingStyle.stroke
           ..strokeWidth = 3
-          ..color = const Color(0xCCFFFFFF));
+          ..color = const Color(0xFFFFFFFF));
+    _sparkle(canvas, -29, -28, 12, const Color(0xFFFFFFFF));
+
     canvas.restore();
   }
 
   void _crown(Canvas canvas, double x, double y, double width) {
-    canvas.save();
-    canvas.translate(x - width / 2, y - width * 0.43);
-    canvas.scale(width / 100);
-    final path = Path()
-      ..moveTo(10, 23)
-      ..lineTo(30, 42)
-      ..lineTo(50, 10)
-      ..lineTo(70, 42)
-      ..lineTo(90, 23)
-      ..lineTo(80, 70)
-      ..quadraticBezierTo(50, 80, 20, 70)
-      ..close();
-    canvas.drawPath(
-        path,
-        Paint()
-          ..shader = const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFFF4AC),
-                Color(0xFFFFD344),
-                Color(0xFFF28A12)
-              ]).createShader(const Rect.fromLTWH(0, 10, 100, 66)));
-    canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..color = const Color(0xFFFFF0B3));
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            const Rect.fromLTWH(20, 72, 60, 10), const Radius.circular(4)),
-        Paint()..color = const Color(0xFFFFC638));
-    for (final p in [
-      const Offset(10, 23),
-      const Offset(50, 10),
-      const Offset(90, 23)
-    ]) {
-      canvas.drawCircle(p, 5, Paint()..color = const Color(0xFFFFF3B1));
-    }
-    _gem(canvas, 50, 59, 15, const Color(0xFFBD52FF));
-    _sparkle(canvas, 87, 8, 10, const Color(0xFFFFFFFF));
-    canvas.restore();
+    sprites.get('CrownHD').render(canvas,
+        position: Vector2(x - width / 2, y - width / 2),
+        size: Vector2.all(width));
   }
 
   String _formatScore(int value) => value
@@ -1060,8 +1162,6 @@ extension GameRendering on BlockBlastGame {
       textDirection: TextDirection.ltr,
     )..layout();
   }
-
-  Offset _off(double x, double y) => Offset(x, y);
 
   double _easeOutBack(double t) {
     final c1 = 1.70158;
