@@ -30,7 +30,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f00.png"
+    "file": "assets/rush/block-0-viola.png"
   },
   {
     "object": "Block",
@@ -41,7 +41,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f01.png"
+    "file": "assets/rush/block-1-azzurro.png"
   },
   {
     "object": "Block",
@@ -52,7 +52,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f02.png"
+    "file": "assets/rush/block-2-verde.png"
   },
   {
     "object": "Block",
@@ -63,7 +63,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f03.png"
+    "file": "assets/rush/block-3-blu.png"
   },
   {
     "object": "Block",
@@ -74,7 +74,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f04.png"
+    "file": "assets/rush/block-4-viola-scuro.png"
   },
   {
     "object": "Block",
@@ -85,7 +85,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f05.png"
+    "file": "assets/rush/block-5-arancione.png"
   },
   {
     "object": "Block",
@@ -96,7 +96,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f06.png"
+    "file": "assets/rush/block-6-rosso.png"
   },
   {
     "object": "Block",
@@ -107,7 +107,7 @@
     "src_y": 0,
     "src_w": 120,
     "src_h": 120,
-    "file": "assets/sprites-named/Block-f07.png"
+    "file": "assets/rush/block-7-rosa.png"
   },
   {
     "object": "BlockBelow",
@@ -217,7 +217,7 @@
     "src_y": 0,
     "src_w": 920,
     "src_h": 910,
-    "file": "assets/sprites-named/Board-f00.png"
+    "file": "assets/rush/frame.png"
   },
   {
     "object": "BtnClose",

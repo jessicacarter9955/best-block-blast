@@ -69,11 +69,11 @@ extension GameRendering on BlockBlastGame {
       canvas.saveLayer(null, previewPaint);
       for (final cell in dragTargets) {
         final cx = Design.gridOriginX + cell.x * Design.bigSize;
-        final cy = Design.gridOriginY + cell.y * Design.bigSize;
+        final cy = Design.gridOriginY + cell.y * Design.cellHeight;
         preview.render(
           canvas,
-          position: Vector2(cx - Design.bigSize / 2, cy - Design.bigSize / 2),
-          size: Vector2(Design.bigSize, Design.bigSize),
+          position: Vector2(cx - Design.bigSize / 2, cy - Design.cellHeight / 2),
+          size: Vector2(Design.bigSize, Design.cellHeight),
         );
       }
       canvas.restore();
@@ -95,7 +95,7 @@ extension GameRendering on BlockBlastGame {
         }
         final block = sprites.get('Block', frame: colorIdx);
         var cx = Design.gridOriginX + x * Design.bigSize;
-        var cy = Design.gridOriginY + y * Design.bigSize;
+        var cy = Design.gridOriginY + y * Design.cellHeight;
         // Settle animation: tiny pop when the piece lands (0.1s).
         final settle = settleCells[math.Point(x, y)];
         if (settle != null && settle < 1) {
@@ -107,8 +107,8 @@ extension GameRendering on BlockBlastGame {
         }
         block.render(
           canvas,
-          position: Vector2(cx - Design.bigSize / 2, cy - Design.bigSize / 2),
-          size: Vector2(Design.bigSize, Design.bigSize),
+          position: Vector2(cx - Design.bigSize / 2, cy - Design.cellHeight / 2),
+          size: Vector2(Design.bigSize, Design.cellHeight),
         );
         if (settle != null && settle < 1) {
           canvas.restore();
@@ -326,7 +326,7 @@ extension GameRendering on BlockBlastGame {
 
     final ph = slotCenter(1);
     final tx = Design.gridOriginX + target.x * Design.bigSize;
-    final ty = Design.gridOriginY + target.y * Design.bigSize;
+    final ty = Design.gridOriginY + target.y * Design.cellHeight;
     final eased = 1 - (1 - moveT) * (1 - moveT);
     final gx = ph.x + (tx - ph.x) * eased;
     final gy = ph.y + (ty - ph.y) * eased;

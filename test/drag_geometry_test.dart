@@ -27,7 +27,7 @@ void main() {
   void moveToBoardCenter(int column, int row) {
     final fingerTarget = Vector2(
       Design.gridOriginX + column * Design.bigSize,
-      Design.gridOriginY + row * Design.bigSize + 200,
+      Design.gridOriginY + row * Design.cellHeight + 200,
     );
     game.onDragDelta(fingerTarget - game.finger);
   }
@@ -47,7 +47,7 @@ void main() {
         previousCellSize = cellSize;
       }
 
-      expect(previousCellSize, closeTo(120, 0.000001));
+      expect(previousCellSize, closeTo(Design.bigSize, 0.000001));
       expect(previousCellSize, closeTo(Design.bigSize, 0.000001));
     });
   }

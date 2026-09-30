@@ -450,9 +450,9 @@ class BlockBlastGame extends FlameGame {
       for (var c = 0; c < cols; c++) {
         if (shape[r][c] == 0) continue;
         final bx = dragPos.x + (c - (cols - 1) / 2) * Design.bigSize;
-        final by = dragPos.y + (r - (rows - 1) / 2) * Design.bigSize;
+        final by = dragPos.y + (r - (rows - 1) / 2) * Design.cellHeight;
         final gx = ((bx - Design.gridOriginX) / Design.bigSize).round();
-        final gy = ((by - Design.gridOriginY) / Design.bigSize).round();
+        final gy = ((by - Design.gridOriginY) / Design.cellHeight).round();
         if (gx < 0 ||
             gx >= Design.gridSize ||
             gy < 0 ||
@@ -621,14 +621,14 @@ class BlockBlastGame extends FlameGame {
       }
       lineFx.add(LineFx(
         horizontal: true,
-        pos: Design.gridOriginY + y * Design.bigSize,
+        pos: Design.gridOriginY + y * Design.cellHeight,
         color: color,
       ));
       // Original: the squares spawn after Wait(0.2).
       after(0.2, () {
         _spawnSquareEffects(
           Design.boardX,
-          Design.gridOriginY + y * Design.bigSize,
+          Design.gridOriginY + y * Design.cellHeight,
           horizontal: true,
           color: color,
         );

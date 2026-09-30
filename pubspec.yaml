@@ -2,7 +2,7 @@ name: chocoblock
 description: Native Flutter port of Block Blast — 1:1 with the original
   Construct 3 game (original sprites, geometry, scoring, tutorial and flows).
 publish_to: "none"
-version: 1.0.0+5
+version: 1.0.0+4
 
 environment:
   sdk: ^3.5.0
@@ -29,9 +29,13 @@ flutter:
     - assets/audio/score/
     - assets/audio/cheerful/
     - assets/sprites-named/
+    - assets/rush/
     # manifest.json is in the same folder, listed above
     - assets/data/ranking.json
   fonts:
     - family: LuckiestGuy
       fonts:
-        - asset: assets/fonts/LuckiestGuy-Regular.ttf
+        - asset: assets/fonts/LuckiestGuy.ttf
+    - family: Riffic
+      fonts:
+        - asset: assets/fonts/Riffic.ttf
