@@ -100,7 +100,7 @@ class Design {
   static const double btnReviveY = 1362.1;
   static const double btnReviveW = 544;
   static const double btnReviveH = 188.4;
-  static const int reviveTime = 5; // seconds
+  static const int reviveTime = 10; // seconds
 
   // === Game Over ===
   static const double goBannerX = 540.2;

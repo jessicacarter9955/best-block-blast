@@ -121,23 +121,36 @@ extension GameRendering on BlockBlastGame {
       _drawLineEffect(canvas, fx);
     }
 
-    // Square particles — 1:1 with the original CreateSquareEffect:
-    // linear movement from the spawn point toward (spawn + v) over [dur],
-    // opacity 100 -> 0 over exactly 1s (destroy at 1s), fixed size.
+    // Faceted jewels with short luminous trails, inspired by the home art.
     final squarePaint = Paint();
-    for (final s in squares) {
-      final moveFrac = (s.t / s.dur).clamp(0.0, 1.0);
-      final alpha = (1 - s.t).clamp(0.0, 1.0);
-      squarePaint.color =
-          Color.fromRGBO(s.color.r, s.color.g, s.color.b, alpha);
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: _off(s.x + s.vx * moveFrac, s.y + s.vy * moveFrac),
-          width: s.size,
-          height: s.size,
-        ),
-        squarePaint,
-      );
+    for (var i = 0; i < squares.length; i++) {
+      final g = squares[i];
+      final t = g.t.clamp(0.0, 1.0);
+      final travel = 1 - math.pow(1 - t, 3).toDouble();
+      final x = g.x + g.vx * travel;
+      final y = g.y + g.vy * travel + 70 * t * t;
+      final color = Color.fromRGBO(g.color.r, g.color.g, g.color.b, 1);
+      canvas.saveLayer(
+          null, Paint()..color = Color.fromRGBO(255, 255, 255, (1 - t) * 0.95));
+      canvas.drawLine(
+          Offset(x - g.vx * 0.09, y - g.vy * 0.09),
+          Offset(x, y),
+          Paint()
+            ..color = color.withValues(alpha: 0.45)
+            ..strokeWidth = 4
+            ..strokeCap = StrokeCap.round);
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate((i.isEven ? 1 : -1) * t * 2.4 + i);
+      _gem(canvas, 0, 0, g.size * (1 - t * 0.45), color);
+      canvas.restore();
+      _sparkle(
+          canvas,
+          x + g.size * 0.65,
+          y - g.size * 0.6,
+          (7 + 9 * math.pow(math.sin(t * 12 + i), 2)).toDouble(),
+          const Color(0xFFFFF5CD));
+      canvas.restore();
     }
 
     // Spawn particles (white-ish dots from piece creation).
@@ -370,13 +383,7 @@ extension GameRendering on BlockBlastGame {
     );
 
     // Best score: crown + cifre oro (1:1).
-    final cup = sprites.get('CupIcon');
-    cup.render(
-      canvas,
-      position: Vector2(
-          Design.cupX - Design.cupSize / 2, Design.cupY - Design.cupH / 2),
-      size: Vector2(Design.cupSize, Design.cupH),
-    );
+    _crown(canvas, Design.cupX, Design.cupY, Design.cupSize);
     // Best score centrato SOTTO la corona (come il web, richiesta utente).
     final bestText = bestShown.toInt().toString();
     _drawGameText(
@@ -402,99 +409,51 @@ extension GameRendering on BlockBlastGame {
 
   void _drawComboDisplay(Canvas canvas) {
     final cd = comboDisplay;
-    if (cd == null) return;
+    if (cd == null || cd.t > 1.8) return;
     final t = cd.t;
-    // Appear 0..0.5s (scale to 1.4x image, opacity 0->100), hold, shrink
-    // from 0.9s (0.5s), gone at 1.4s.
-    double scale;
-    double opacity;
-    if (t < 0.3) {
-      scale = 1.4 * _easeOutBack(t / 0.3);
-      opacity = t / 0.3;
-    } else if (t < 0.9) {
-      scale = 1.4;
-      opacity = 1;
-    } else {
-      final st = (t - 0.9) / 0.5;
-      scale = 1.4 * (1 - st);
-      opacity = 1 - st;
-    }
-    if (opacity <= 0 || scale <= 0) return;
-
-    final glow = sprites.get('ComboSprite');
-    final gw = glow.srcSize.x * scale;
-    final gh = glow.srcSize.y * scale;
+    final opacity = ((1.8 - t) / 0.45).clamp(0.0, 1.0);
+    final scale = t < 0.3 ? _easeOutBack(t / 0.3) : 1.0;
     canvas.saveLayer(
         null, Paint()..color = Color.fromRGBO(255, 255, 255, opacity));
-    glow.render(canvas,
-        position: Vector2(540 - gw / 2, 960 - gh / 2), size: Vector2(gw, gh));
-
-    if (cd.combo > 1) {
-      // Combo counter (txtComboNum, digits only), scale 0 -> 1.7, placed to
-      // the right of the glow (original: ComboSprite.BBoxRight + TextWidth/2).
-      final textScale = math.min(1.0, t / 0.3);
-      final s = 1.7 * textScale;
-      final textW = comboFont.measureWidth('${cd.combo}', scale: s * 0.7);
-      comboFont.drawCentered(
-        canvas,
-        '${cd.combo}',
-        540 + gw / 2 + textW / 2,
-        960,
-        scale: s * 0.7,
-      );
+    canvas.translate(540, 780);
+    canvas.scale(scale);
+    for (var i = 0; i < 8; i++) {
+      final angle = i * math.pi / 4 + t * 0.6;
+      final x = math.cos(angle) * 285, y = math.sin(angle) * 118;
+      _gem(canvas, x, y, 22 + (i % 3) * 7,
+          i.isEven ? const Color(0xFF59E7FF) : const Color(0xFFFFD05A));
+      _sparkle(canvas, x + 15, y - 22, 8, const Color(0xFFFFFFFF));
     }
+    _drawGameText(canvas, 'COMBO', 0, -38, 94, const Color(0xFFFFFFFF),
+        const Color(0xFF592DB3), 10);
+    _drawGameText(canvas, '×${math.max(1, cd.combo)}', 0, 68, 118,
+        const Color(0xFFFFD45C), const Color(0xFF71359E), 9);
     canvas.restore();
   }
 
   void _drawEarnedDisplay(Canvas canvas) {
     final ed = earnedDisplay;
-    if (ed == null) return;
+    if (ed == null || ed.t > 1.5) return;
     final t = ed.t;
-    double scale;
-    double opacity;
-    if (t < 0.3) {
-      scale = 1.2 * _easeOutBack(t / 0.3);
-      opacity = t / 0.3;
-    } else if (t < 1.0) {
-      scale = 1.2;
-      opacity = 1;
-    } else {
-      final ft = (t - 1.0) / 0.3;
-      scale = 1.2 * (1 - ft);
-      opacity = 1 - ft;
-    }
-    if (opacity <= 0) return;
-
-    final glow = sprites.get('EarnedScoreGlow');
-    final gw = glow.srcSize.x * scale;
-    final gh = glow.srcSize.y * scale;
+    final scale = t < 0.22 ? _easeOutBack(t / 0.22) : 1.0;
+    final text = '+${ed.value}';
+    final size = math.min(100.0, 700 / math.max(1, text.length) * 1.3);
+    final halfWidth = _measureGameText(text, size) * scale / 2 + 30;
+    final x = ed.x.clamp(halfWidth, 1080 - halfWidth).toDouble();
+    // Keep the reward below the combo title and away from the screen edges.
+    final y = ed.y.clamp(1030.0, 1450.0) - t * 65;
     canvas.saveLayer(
-        null, Paint()..color = Color.fromRGBO(255, 255, 255, opacity));
-    glow.render(
-      canvas,
-      position: Vector2(ed.x - gw / 2, ed.y - gh / 2),
-      size: Vector2(gw, gh),
-    );
-    earnedFont.drawCentered(
-      canvas,
-      '+${ed.value}',
-      ed.x,
-      ed.y,
-      scale: scale * 0.9,
-    );
-
-    // Cheerful praise (frame = lines, only for 2+ lines).
-    if (ed.lines >= 2) {
-      final frame = ed.lines.clamp(2, 6);
-      final cheerful = sprites.get('Cheerful', frame: frame);
-      final cw = cheerful.srcSize.x * scale;
-      final ch = cheerful.srcSize.y * scale;
-      cheerful.render(
-        canvas,
-        position: Vector2(ed.x - cw / 2, ed.y + 150 - ch / 2),
-        size: Vector2(cw, ch),
-      );
-    }
+        null,
+        Paint()
+          ..color =
+              Color.fromRGBO(255, 255, 255, ((1.5 - t) / 0.4).clamp(0.0, 1.0)));
+    canvas.translate(x, y);
+    canvas.scale(scale);
+    _drawGameText(canvas, text, 0, 0, size, const Color(0xFFFFF0A6),
+        const Color(0xFF55318F), 8);
+    if (ed.lines >= 2)
+      _uiText(canvas, ed.lines >= 3 ? 'BRILLIANT!' : 'DAZZLING!', 0, 92, 38,
+          title: true, color: const Color(0xFF8EF1FF));
     canvas.restore();
   }
 
@@ -514,7 +473,7 @@ extension GameRendering on BlockBlastGame {
 
   void _drawNoSpaceBanner(Canvas canvas) {
     final ns = noSpaceBanner;
-    if (ns == null) return;
+    if (ns == null || state != GameState.waiting) return;
     final t = ns.t.clamp(0.0, 1.0);
     final scale = _easeOutBack((t / 0.3).clamp(0.0, 1.0));
     final opacity = (t / 0.3).clamp(0.0, 1.0);
@@ -533,144 +492,53 @@ extension GameRendering on BlockBlastGame {
 
   void _drawReviveOverlay(Canvas canvas) {
     if (state != GameState.revive) return;
-
-    final circle = sprites.get('ReviveCircle');
-    _drawSpriteCentered(
-      canvas,
-      circle,
-      Design.reviveCircleX,
-      Design.reviveCircleY,
-      Design.reviveCircleSize,
-      Design.reviveCircleSize,
-    );
-
-    // Radial progress arc (original RadialProgress behavior, 0..100).
-    if (reviveRadial > 0) {
-      final rect = Rect.fromCenter(
-        center: _off(Design.reviveCircleX, Design.reviveCircleY),
-        width: Design.reviveCircleSize - 24,
-        height: Design.reviveCircleSize - 24,
-      );
-      final paint = Paint()
-        ..color = const Color(0xFFFFC93C)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 26
-        ..strokeCap = StrokeCap.round;
-      canvas.drawArc(
-          rect, -math.pi / 2, math.pi * 2 * reviveRadial / 100, false, paint);
-    }
-
-    // Countdown number (big digits, oro su cerchio revive).
-    _drawGameText(
-      canvas,
-      reviveText.toString(),
-      Design.reviveCircleX,
-      Design.reviveCircleY,
-      200,
-      BlockPalette.text,
-      BlockPalette.gold,
-      14,
-    );
-
-    final btn = sprites.get('BtnRevive');
-    _drawSpriteCentered(
-      canvas,
-      btn,
-      Design.btnReviveX,
-      Design.btnReviveY,
-      Design.btnReviveW,
-      Design.btnReviveH,
-    );
+    _panel(canvas, const Rect.fromLTWH(98, 400, 884, 1120));
+    _gem(canvas, 540, 610, 130, const Color(0xFF5CDFF4));
+    _sparkle(canvas, 640, 550, 26, const Color(0xFFFFE8A4));
+    _uiText(canvas, 'ONE MORE CHANCE', 540, 780, 61, title: true);
+    _uiText(canvas, 'Your next combo is waiting.', 540, 867, 36,
+        color: const Color(0xFFB7CDF4));
+    _uiText(canvas, 'Keep your score. Get fresh pieces.', 540, 925, 32,
+        color: const Color(0xFFB7CDF4));
+    final arc = Rect.fromCircle(center: const Offset(540, 1060), radius: 64);
+    canvas.drawArc(
+        arc,
+        -math.pi / 2,
+        math.pi * 2 * (1 - reviveRadial / 100),
+        false,
+        Paint()
+          ..color = const Color(0xFFFFD05A)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..strokeCap = StrokeCap.round);
+    _uiText(canvas, '$reviveText', 540, 1060, 56, title: true);
+    _actionButton(canvas, 'revive_btn', 'FREE CONTINUE',
+        Icons.play_circle_rounded, 540, 1250, 712, 148,
+        primary: true, labelSize: 48);
+    _uiText(canvas, 'No ad required in this preview', 540, 1353, 27,
+        color: const Color(0xFF92B3E8));
+    _uiText(canvas, 'END RUN', 540, 1440, 34, bold: true);
   }
 
   void _drawGameOverOverlay(Canvas canvas) {
     if (state != GameState.gameOver) return;
-
-    // Light blue backdrop (original LightBlueBg 1277x2094 at (540,995)).
-    final bg = sprites.get('LightBlueBg');
-    final bw = 1277.0, bh = 2094.0;
-    bg.render(
-      canvas,
-      position: Vector2(540 - bw / 2, 995 - bh / 2),
-      size: Vector2(bw, bh),
-    );
-
-    // "Game Over" banner.
-    final banner = sprites.get('GameOver');
-    _drawSpriteCentered(
-      canvas,
-      banner,
-      Design.goBannerX,
-      Design.goBannerY,
-      Design.goBannerW,
-      Design.goBannerH,
-    );
-
-    // Labels: "Score" (frame 0) and "Best Score" (frame 1).
-    final labelScore = sprites.get('TLabel', frame: 0);
-    _drawSpriteCentered(
-      canvas,
-      labelScore,
-      540,
-      Design.goScoreLabelY,
-      146,
-      45,
-    );
-    final labelBest = sprites.get('TLabel', frame: 1);
-    _drawSpriteCentered(
-      canvas,
-      labelBest,
-      540,
-      Design.goBestLabelY,
-      262,
-      45,
-    );
-
-    // Big score with count-up (1:1: bianco + bordo blu).
-    _drawGameText(
-      canvas,
-      goScoreShown.toInt().toString(),
-      540,
-      Design.goScoreY,
-      155,
-      BlockPalette.text,
-      BlockPalette.scoreStroke,
-      14,
-    );
-
-    // Cup + best (left-anchored group at (482, 1223)).
-    final cup = sprites.get('CupIcon');
-    _drawSpriteCentered(
-      canvas,
-      cup,
-      Design.goCupX,
-      Design.goCupY,
-      Design.goCupSize,
-      Design.goCupH,
-    );
-    final bestText = storage.bestScore.toString();
-    final bestW = _measureGameText(bestText, 54);
-    _drawGameText(
-      canvas,
-      bestText,
-      Design.goBestX + bestW / 2,
-      Design.goBestY,
-      54,
-      BlockPalette.gold,
-      const Color(0xFF7A4600),
-      5,
-    );
-
-    // Play again button.
-    final btn = sprites.get('BtnGOReset');
-    _drawSpriteCentered(
-      canvas,
-      btn,
-      Design.btnGOResetX,
-      Design.btnGOResetY,
-      Design.btnGOResetW,
-      Design.btnGOResetH,
-    );
+    _panel(canvas, const Rect.fromLTWH(98, 350, 884, 1260));
+    _crown(canvas, 540, 535, 205);
+    _uiText(canvas, 'GREAT RUN!', 540, 710, 80, title: true);
+    _uiText(canvas, 'Every round is a fresh start.', 540, 793, 34,
+        color: const Color(0xFFB7CDF4));
+    _uiText(canvas, 'YOUR SCORE', 540, 905, 30,
+        color: const Color(0xFF92B3E8), bold: true);
+    _drawGameText(canvas, _formatScore(goScoreShown.toInt()), 540, 1020, 112,
+        const Color(0xFFFFFFFF), const Color(0xFF123274), 8);
+    _uiText(canvas, 'BEST  ${_formatScore(storage.bestScore)}', 540, 1135, 40,
+        color: const Color(0xFFFFD05A), bold: true);
+    _actionButton(canvas, 'go_reset', 'PLAY AGAIN', Icons.refresh_rounded, 540,
+        1330, 712, 148,
+        primary: true, labelSize: 50);
+    _actionButton(
+        canvas, 'go_home', 'HOME', Icons.home_rounded, 540, 1490, 400, 96,
+        labelSize: 34);
   }
 
   void _drawPauseOverlay(Canvas canvas) {
@@ -838,6 +706,111 @@ extension GameRendering on BlockBlastGame {
   // =====================================================================
   //  Helpers
   // =====================================================================
+
+  void _sparkle(Canvas canvas, double x, double y, double size, Color color) {
+    final path = Path()
+      ..moveTo(x, y - size)
+      ..quadraticBezierTo(x + size * 0.18, y - size * 0.18, x + size, y)
+      ..quadraticBezierTo(x + size * 0.18, y + size * 0.18, x, y + size)
+      ..quadraticBezierTo(x - size * 0.18, y + size * 0.18, x - size, y)
+      ..quadraticBezierTo(x - size * 0.18, y - size * 0.18, x, y - size)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  void _gem(Canvas canvas, double x, double y, double size, Color color) {
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.scale(size / 100);
+    final outline = Path()
+      ..moveTo(-34, -42)
+      ..lineTo(32, -42)
+      ..lineTo(50, -16)
+      ..lineTo(0, 52)
+      ..lineTo(-50, -16)
+      ..close();
+    canvas.drawPath(
+        outline,
+        Paint()
+          ..shader = LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(color, const Color(0xFFFFFFFF), 0.6)!,
+                color,
+                Color.lerp(color, const Color(0xFF381373), 0.6)!
+              ]).createShader(const Rect.fromLTWH(-50, -42, 100, 94)));
+    final facets = Path()
+      ..moveTo(-34, -42)
+      ..lineTo(-21, -13)
+      ..lineTo(0, 52)
+      ..lineTo(21, -13)
+      ..lineTo(32, -42)
+      ..moveTo(-50, -16)
+      ..lineTo(50, -16)
+      ..moveTo(-21, -13)
+      ..lineTo(0, -42)
+      ..lineTo(21, -13);
+    canvas.drawPath(
+        facets,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..color = const Color(0x99FFFFFF));
+    canvas.drawPath(
+        outline,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0xCCFFFFFF));
+    canvas.restore();
+  }
+
+  void _crown(Canvas canvas, double x, double y, double width) {
+    canvas.save();
+    canvas.translate(x - width / 2, y - width * 0.43);
+    canvas.scale(width / 100);
+    final path = Path()
+      ..moveTo(10, 23)
+      ..lineTo(30, 42)
+      ..lineTo(50, 10)
+      ..lineTo(70, 42)
+      ..lineTo(90, 23)
+      ..lineTo(80, 70)
+      ..quadraticBezierTo(50, 80, 20, 70)
+      ..close();
+    canvas.drawPath(
+        path,
+        Paint()
+          ..shader = const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFFF4AC),
+                Color(0xFFFFD344),
+                Color(0xFFF28A12)
+              ]).createShader(const Rect.fromLTWH(0, 10, 100, 66)));
+    canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..color = const Color(0xFFFFF0B3));
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            const Rect.fromLTWH(20, 72, 60, 10), const Radius.circular(4)),
+        Paint()..color = const Color(0xFFFFC638));
+    for (final p in [
+      const Offset(10, 23),
+      const Offset(50, 10),
+      const Offset(90, 23)
+    ]) {
+      canvas.drawCircle(p, 5, Paint()..color = const Color(0xFFFFF3B1));
+    }
+    _gem(canvas, 50, 59, 15, const Color(0xFFBD52FF));
+    _sparkle(canvas, 87, 8, 10, const Color(0xFFFFFFFF));
+    canvas.restore();
+  }
 
   String _formatScore(int value) => value
       .toString()
@@ -1046,12 +1019,6 @@ extension GameRendering on BlockBlastGame {
             ? x - painter.width
             : x - painter.width / 2;
     painter.paint(canvas, Offset(dx, y - painter.height / 2));
-  }
-
-  void _drawSpriteCentered(
-      Canvas canvas, Sprite sprite, double cx, double cy, double w, double h) {
-    sprite.render(canvas,
-        position: Vector2(cx - w / 2, cy - h / 2), size: Vector2(w, h));
   }
 
   /// Testo di gioco 1:1 (font Luckiest Guy): prima lo stroke, poi il fill,

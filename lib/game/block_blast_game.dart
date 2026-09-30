@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:ui' show Canvas, Color;
 
 import 'package:flame/components.dart';
@@ -49,6 +50,10 @@ class BlockBlastGame extends FlameGame {
   late BitmapFont comboFont;
 
   final math.Random rng = math.Random();
+
+  final String? previewScene =
+      kDebugMode ? Uri.base.queryParameters['preview'] : null;
+  double _previewClock = 0;
 
   // === Core state ===
   GameState state = GameState.home;
@@ -151,6 +156,23 @@ class BlockBlastGame extends FlameGame {
     await audio.init();
     bestShown = storage.bestScore.toDouble();
     await world.add(GameCanvas(this));
+    if (['combo', 'revive', 'gameover'].contains(previewScene)) {
+      state = previewScene == 'revive'
+          ? GameState.revive
+          : previewScene == 'gameover'
+              ? GameState.gameOver
+              : GameState.hud;
+      score = 2480;
+      goScoreShown = 2480;
+      scoreShown = 2480;
+      blackBgOpacity = previewScene == 'combo' ? 0 : 0.75;
+      reviveText = 10;
+      for (var y = 4; y < 8; y++) {
+        for (var x = 0; x < 8; x++) {
+          if ((x + y) % 3 != 0) grid[y][x] = (x + y) % 8;
+        }
+      }
+    }
   }
 
   // =====================================================================
@@ -635,33 +657,21 @@ class BlockBlastGame extends FlameGame {
 
   void _spawnSquareEffects(double x, double y,
       {required bool horizontal, required RgbColor color}) {
-    // Original: For loopindex 1..10 (vSquareCount/2), TWO CreateSquareEffect
-    // calls per iteration (one per direction along the line axis):
-    //   spawn offset along the axis = (loopindex - 1) * 50
-    //   perpendicular jitter        = random(-50, 50)
-    //   displacement                = +/-220 along the axis, 0 perpendicular
-    //   size                        = int(random(20, 50))
-    //   movement duration           = random(1.5, 2.2) * 1.5  (linear)
-    //   opacity                     = 100 -> 0 over 1s, destroy at end.
-    // The 0.2s delay before spawning is applied by the caller (after(0.2,..)).
-    for (var i = 1; i <= 10; i++) {
-      final along = (i - 1) * 50.0;
-      final j1 = rng.nextDouble() * 100 - 50;
-      final j2 = rng.nextDouble() * 100 - 50;
-      final s1 = 20 + rng.nextDouble() * 30;
-      final s2 = 20 + rng.nextDouble() * 30;
-      final d1 = (1.5 + rng.nextDouble() * 0.7) * 1.5;
-      final d2 = (1.5 + rng.nextDouble() * 0.7) * 1.5;
-      if (horizontal) {
-        // Original "X" branch: fly +/-X, Y jitter.
-        squares.add(SquareFx(x + along, y + j1, 220, 0, s1, color, d1));
-        squares.add(SquareFx(x - along, y + j2, -220, 0, s2, color, d2));
-      } else {
-        // Original "Y" branch: fly +/-Y, X jitter.
-        squares.add(SquareFx(x + j1, y + along, 0, 220, s1, color, d1));
-        squares.add(SquareFx(x - j2, y - along, 0, -220, s2, color, d2));
-      }
+    for (var i = 0; i < 24; i++) {
+      final along = (rng.nextDouble() - 0.5) * 820;
+      final angle = rng.nextDouble() * math.pi * 2;
+      final speed = 100 + rng.nextDouble() * 210;
+      final jewelColor = RgbColor.fromColor([0, 1, 5, 7][i % 4]);
+      squares.add(SquareFx(
+          horizontal ? x + along : x,
+          horizontal ? y : y + along,
+          math.cos(angle) * speed,
+          math.sin(angle) * speed - 70,
+          25 + rng.nextDouble() * 31,
+          jewelColor,
+          1));
     }
+    if (squares.length > 144) squares.removeRange(0, squares.length - 144);
   }
 
   void _onNoScoreMove() {
@@ -809,6 +819,11 @@ class BlockBlastGame extends FlameGame {
     for (var i = 0; i < 3; i++) {
       tray[i] = null;
     }
+    for (var y = 2; y < 5; y++) {
+      for (var x = 2; x < 5; x++) {
+        grid[y][x] = null;
+      }
+    }
     putShapeCount = 0;
     createShapes(revive: true);
     state = GameState.hud;
@@ -881,6 +896,25 @@ class BlockBlastGame extends FlameGame {
 
   @override
   void update(double dt) {
+    if (['combo', 'revive', 'gameover'].contains(previewScene)) {
+      _previewClock += dt;
+      if (previewScene == 'combo') {
+        final t = _previewClock % 2.3;
+        comboDisplay = ComboDisplay(4, 3, piecePos: Vector2(540, 1000))..t = t;
+        earnedDisplay = EarnedDisplay(540, 1160, 480, 3)..t = t;
+        if (squares.isEmpty || t < dt) {
+          squares.clear();
+          _spawnSquareEffects(540, 1060,
+              horizontal: true, color: RgbColor.fromColor(1));
+        }
+        for (final g in squares) {
+          g.t = t;
+        }
+      }
+      super.update(dt);
+      return;
+    }
+
     super.update(dt);
     if (dt <= 0 || dt > 0.5) return;
 
@@ -1059,6 +1093,12 @@ class BlockBlastGame extends FlameGame {
       case 'revive_btn':
         reviveNow();
         break;
+      case 'revive_skip':
+        _showGameOverLayer();
+        break;
+      case 'go_home':
+        goHome();
+        break;
       case 'go_reset':
         startGame();
         break;
@@ -1142,16 +1182,12 @@ class BlockBlastGame extends FlameGame {
         }
         return null;
       case GameState.revive:
-        if (_contains(p, Design.btnReviveX, Design.btnReviveY,
-            Design.btnReviveW, Design.btnReviveH)) {
-          return 'revive_btn';
-        }
+        if (_contains(p, 540, 1250, 712, 148)) return 'revive_btn';
+        if (_contains(p, 540, 1440, 500, 90)) return 'revive_skip';
         return null;
       case GameState.gameOver:
-        if (_contains(p, Design.btnGOResetX, Design.btnGOResetY,
-            Design.btnGOResetW, Design.btnGOResetH)) {
-          return 'go_reset';
-        }
+        if (_contains(p, 540, 1330, 712, 148)) return 'go_reset';
+        if (_contains(p, 540, 1490, 400, 96)) return 'go_home';
         return null;
       case GameState.ranking:
         if (_contains(p, Design.lbCloseX, Design.lbCloseY, Design.lbCloseSize,
