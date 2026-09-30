@@ -8,7 +8,7 @@
     "src_y": 0,
     "src_w": 941,
     "src_h": 1672,
-    "file": "assets/sprites-named/Bg-f00.png"
+    "file": "assets/sprites-named/Bg-clean.png"
   },
   {
     "object": "BlackBg",
@@ -855,6 +855,6 @@
     "src_y": 0,
     "src_w": 1080,
     "src_h": 1920,
-    "file": "BgHome-f00.png"
+    "file": "assets/sprites-named/BgHome-clean.png"
   }
 ]

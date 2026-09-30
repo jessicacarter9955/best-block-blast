@@ -52,8 +52,8 @@ class BlockBlastGame extends FlameGame {
 
   // === Core state ===
   GameState state = GameState.home;
-  final List<List<int?>> grid =
-      List.generate(Design.gridSize, (_) => List<int?>.filled(Design.gridSize, null));
+  final List<List<int?>> grid = List.generate(
+      Design.gridSize, (_) => List<int?>.filled(Design.gridSize, null));
 
   int score = 0;
   double scoreShown = 0; // animated counter (original: tween "num" 0.5s)
@@ -77,9 +77,13 @@ class BlockBlastGame extends FlameGame {
   bool dragValid = false;
   List<math.Point<int>> dragTargets = [];
   final Set<String> dragMarkedLines = {}; // "R3" / "C4"
-  double dragScale = 1; // piece scale animates 1 -> 2 on grab
+  double dragScale = 1; // relative to Design.smallSize
+  double _dragStartScale = 1;
+  double _dragScaleT = 0;
+  double get boardPieceScale => Design.bigSize / Design.smallSize;
   double dragReturnT = -1; // >= 0 while returning to the tray
   Vector2 returnFrom = Vector2.zero();
+  double returnScale = 1;
 
   // === Placement settle animation (cells -> progress 0..1) ===
   final Map<math.Point<int>, double> settleCells = {};
@@ -134,7 +138,7 @@ class BlockBlastGame extends FlameGame {
   /// Letterbox color matching the Block Rush background (flat #4E076D,
   /// sampled from the real game).
   @override
-  Color backgroundColor() => const Color(0xFF4E076D);
+  Color backgroundColor() => const Color(0xFF0A1755);
 
   @override
   Future<void> onLoad() async {
@@ -191,6 +195,12 @@ class BlockBlastGame extends FlameGame {
     earnedDisplay = null;
     noSpaceBanner = null;
     settleCells.clear();
+    dragSlot = -1;
+    returningSlot = -1;
+    dragReturnT = -1;
+    dragValid = false;
+    dragTargets.clear();
+    dragMarkedLines.clear();
     _pending.clear();
     tweens.clear();
     pausePopupY = -1500;
@@ -265,7 +275,10 @@ class BlockBlastGame extends FlameGame {
         if (shape[r][c] == 0) continue;
         final gx = ox + c;
         final gy = oy + r;
-        if (gx < 0 || gx >= Design.gridSize || gy < 0 || gy >= Design.gridSize) {
+        if (gx < 0 ||
+            gx >= Design.gridSize ||
+            gy < 0 ||
+            gy >= Design.gridSize) {
           return false;
         }
         if (grid[gy][gx] != null) return false;
@@ -323,8 +336,7 @@ class BlockBlastGame extends FlameGame {
     final shape = kShapes[slot.shapeIdx];
     final w = shape[0].length * Design.smallSize;
     final h = shape.length * Design.smallSize;
-    final s = 1.0;
-    return s * .0 + math.min(1.0, math.min(300 / w, 300 / h));
+    return math.min(1.0, math.min(300 / w, 300 / h));
   }
 
   // =====================================================================
@@ -356,7 +368,12 @@ class BlockBlastGame extends FlameGame {
         final ph = slotCenter(i);
         dragDX = ph.x - p.x;
         dragPos.setFrom(ph);
-        dragScale = 1;
+        dragScale = trayScaleFor(slot);
+        _dragStartScale = dragScale;
+        _dragScaleT = 0;
+        dragValid = false;
+        dragTargets.clear();
+        dragMarkedLines.clear();
         audio.sfxWhoosh();
         // Original hides the Tut layer while dragging.
         return;
@@ -373,13 +390,14 @@ class BlockBlastGame extends FlameGame {
     final ph = slotCenter(slotIdx);
     final rows = shape.length;
     final cols = shape[0].length;
+    final cellSize = Design.smallSize * trayScaleFor(slot);
     final out = <Vector2>[];
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         if (shape[r][c] == 0) continue;
         out.add(Vector2(
-          ph.x + (c - (cols - 1) / 2) * Design.smallSize,
-          ph.y + (r - (rows - 1) / 2) * Design.smallSize,
+          ph.x + (c - (cols - 1) / 2) * cellSize,
+          ph.y + (r - (rows - 1) / 2) * cellSize,
         ));
       }
     }
@@ -413,7 +431,10 @@ class BlockBlastGame extends FlameGame {
         final by = dragPos.y + (r - (rows - 1) / 2) * Design.bigSize;
         final gx = ((bx - Design.gridOriginX) / Design.bigSize).round();
         final gy = ((by - Design.gridOriginY) / Design.bigSize).round();
-        if (gx < 0 || gx >= Design.gridSize || gy < 0 || gy >= Design.gridSize) {
+        if (gx < 0 ||
+            gx >= Design.gridSize ||
+            gy < 0 ||
+            gy >= Design.gridSize) {
           return;
         }
         if (grid[gy][gx] != null) return;
@@ -460,6 +481,10 @@ class BlockBlastGame extends FlameGame {
 
   void onDragEnd() {
     if (dragSlot < 0) return;
+    if (state != GameState.hud) {
+      onDragCancel();
+      return;
+    }
     final slot = tray[dragSlot];
     if (slot == null) {
       dragSlot = -1;
@@ -471,6 +496,14 @@ class BlockBlastGame extends FlameGame {
       _returnPiece();
     }
     dragValid = false;
+    dragMarkedLines.clear();
+  }
+
+  void onDragCancel() {
+    if (dragSlot < 0) return;
+    _returnPiece();
+    dragValid = false;
+    dragTargets.clear();
     dragMarkedLines.clear();
   }
 
@@ -509,6 +542,7 @@ class BlockBlastGame extends FlameGame {
     returningSlot = slotIdx;
     dragReturnT = 0;
     returnFrom.setFrom(dragPos);
+    returnScale = dragScale;
     audio.sfxReturn();
   }
 
@@ -545,7 +579,8 @@ class BlockBlastGame extends FlameGame {
     } else {
       // Combo display (glow from the 2nd consecutive clear, counter + shake
       // from the 3rd), then the earned popup after 0.9s + 0.5s shrink.
-      comboDisplay = ComboDisplay(comboAfter, lines, piecePos: piecePos.clone());
+      comboDisplay =
+          ComboDisplay(comboAfter, lines, piecePos: piecePos.clone());
       if (comboAfter > 1) {
         doShake(5, 0.2);
       }
@@ -786,6 +821,7 @@ class BlockBlastGame extends FlameGame {
 
   void pauseOpen() {
     if (state != GameState.hud) return;
+    onDragCancel();
     stateBeforePause = GameState.hud;
     state = GameState.pause;
     addTween(Tween(
@@ -923,9 +959,11 @@ class BlockBlastGame extends FlameGame {
       ns.t += dt;
     }
 
-    // Drag piece scale-in.
+    // Grow from the actual tray size to one board cell, without overshoot.
     if (dragSlot >= 0) {
-      dragScale = math.min(2.0, dragScale + dt * 8);
+      _dragScaleT = math.min(1.0, _dragScaleT + dt / 0.14);
+      final eased = 1 - (1 - _dragScaleT) * (1 - _dragScaleT);
+      dragScale = _dragStartScale + (boardPieceScale - _dragStartScale) * eased;
     }
 
     // Piece return animation (0.3s).
@@ -1000,6 +1038,7 @@ class BlockBlastGame extends FlameGame {
         pauseOpen();
         break;
       case 'pause_close':
+      case 'pause_resume':
         pauseClose();
         break;
       case 'pause_music':
@@ -1035,8 +1074,8 @@ class BlockBlastGame extends FlameGame {
     switch (state) {
       case GameState.home:
         if (rankingData != null) {
-          if (_contains(p, Design.lbCloseX, Design.lbCloseY,
-              Design.lbCloseSize, Design.lbCloseSize)) {
+          if (_contains(p, Design.lbCloseX, Design.lbCloseY, Design.lbCloseSize,
+              Design.lbCloseSize)) {
             return 'ranking_close';
           }
           return null;
@@ -1045,8 +1084,8 @@ class BlockBlastGame extends FlameGame {
             Design.btnPlayH)) {
           return 'home_play';
         }
-        if (_contains(p, 539, Design.homeBtnY, Design.homeBtnSize,
-            Design.homeBtnSize)) {
+        if (_contains(
+            p, 539, Design.homeBtnY, Design.homeBtnSize, Design.homeBtnSize)) {
           return 'home_ranking';
         }
         if (_contains(p, Design.homeMusicX, Design.homeBtnY, Design.homeBtnSize,
@@ -1066,22 +1105,27 @@ class BlockBlastGame extends FlameGame {
         return null;
       case GameState.pause:
         if (rankingData != null) {
-          if (_contains(p, Design.lbCloseX, Design.lbCloseY,
-              Design.lbCloseSize, Design.lbCloseSize)) {
+          if (_contains(p, Design.lbCloseX, Design.lbCloseY, Design.lbCloseSize,
+              Design.lbCloseSize)) {
             return 'ranking_close';
           }
           return null;
+        }
+        // Controls follow the sliding panel instead of accepting taps at
+        // their final position while the panel is still moving.
+        p = Vector2(p.x, p.y - (pausePopupY - Design.pausePopupY));
+        if (_contains(p, Design.btnResumeX, Design.btnResumeY,
+            Design.btnResumeW, Design.btnResumeH)) {
+          return 'pause_resume';
         }
         if (_contains(p, Design.btnCloseX, Design.btnCloseY,
             Design.btnCloseSize, Design.btnCloseSize)) {
           return 'pause_close';
         }
-        if (_contains(p, Design.btnSfxX, Design.btnSfxY, Design.toggleSize,
-            Design.toggleSize)) {
+        if (_contains(p, 540, Design.btnSfxY, 712, 118)) {
           return 'pause_sfx';
         }
-        if (_contains(p, Design.btnMusicX, Design.btnMusicY, Design.toggleSize,
-            Design.toggleSize)) {
+        if (_contains(p, 540, Design.btnMusicY, 712, 118)) {
           return 'pause_music';
         }
         if (_contains(p, Design.btnHomeX, Design.btnHomeY, Design.btnHomeW,
@@ -1121,7 +1165,10 @@ class BlockBlastGame extends FlameGame {
   }
 
   bool _contains(Vector2 p, double cx, double cy, double w, double h) {
-    return p.x >= cx - w / 2 && p.x <= cx + w / 2 && p.y >= cy - h / 2 && p.y <= cy + h / 2;
+    return p.x >= cx - w / 2 &&
+        p.x <= cx + w / 2 &&
+        p.y >= cy - h / 2 &&
+        p.y <= cy + h / 2;
   }
 
   RgbColor _blockColor(int colorIdx) => RgbColor.fromColor(colorIdx);
@@ -1289,7 +1336,7 @@ class GameCanvas extends Component with TapCallbacks, DragCallbacks {
   @override
   void onDragCancel(DragCancelEvent event) {
     super.onDragCancel(event);
-    game.onDragEnd();
+    game.onDragCancel();
   }
 
   @override
