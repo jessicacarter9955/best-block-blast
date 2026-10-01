@@ -604,10 +604,31 @@ extension GameRendering on BlockBlastGame {
           ..strokeWidth = 8
           ..strokeCap = StrokeCap.round);
     _uiText(canvas, '$reviveText', 540, 1060, 56, title: true);
-    _actionButton(canvas, 'revive_btn', 'FREE CONTINUE',
-        Icons.play_circle_rounded, 540, 1250, 712, 148,
-        primary: true, labelSize: 48);
-    _uiText(canvas, 'No ad required in this preview', 540, 1353, 27,
+    // Label dinamiche 1:1 col port web: rewarded pronto → WATCH AD &
+    // CONTINUE, altrimenti FREE CONTINUE (nessun annuncio richiesto).
+    _actionButton(
+        canvas,
+        'revive_btn',
+        reviveAdBusy
+            ? 'AD PLAYING…'
+            : reviveAdReady
+                ? 'WATCH AD & CONTINUE'
+                : 'FREE CONTINUE',
+        Icons.play_circle_rounded,
+        540,
+        1250,
+        712,
+        148,
+        primary: true,
+        labelSize: reviveAdReady || reviveAdBusy ? 40 : 48);
+    _uiText(
+        canvas,
+        reviveAdReady
+            ? 'Watch a short video to keep your score.'
+            : 'No ad required in this preview',
+        540,
+        1353,
+        27,
         color: const Color(0xFF92B3E8));
     _uiText(canvas, 'END RUN', 540, 1440, 34, bold: true);
     if (replayMoves.isNotEmpty) {

@@ -8,7 +8,11 @@ See [release readiness](docs/RELEASE-READINESS.md) and [UI update](docs/UI-UPDAT
 
 > This repository ships **only the Block Rush 1:1 version** — no other skin
 > variants are included. Every push to `master` builds a **release APK**
-> via GitHub Actions (see the Actions tab → "Build Release APK" → artifacts).
+> via GitHub Actions (see the Actions tab → "Build Release APK" → artifacts)
+> and a **Playgama web bundle** (`block-rush-web-latest.zip` in the
+> [latest Release](https://github.com/jessicacarter9955/best-block-blast/releases/latest))
+> ready to publish on YouTube Playables and 20+ platforms — see
+> [docs/PLAYGAMA.md](docs/PLAYGAMA.md).
 
 ## Project layout
 

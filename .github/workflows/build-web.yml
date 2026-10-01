@@ -1,0 +1,87 @@
+name: Build Playgama Web Bundle
+
+# Builda il bundle web (Flutter) pronto per la pubblicazione multi-piattaforma
+# con Playgama (YouTube Playables, CrazyGames, Poki, Telegram, ...).
+# A OGNI push su master pubblica block-rush-web-latest.zip nella Release
+# "latest": è lo zip da caricare su https://developer.playgama.com
+# (index.html alla radice, playgama-bridge-config.json incluso).
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Flutter Web (Playgama bundle)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Test fair deals and drag geometry
+        run: flutter test
+
+      - name: Build web bundle (root base href, zipped for Playgama)
+        # --no-tree-shake-icons come la build APK (icone Material usate a
+        # runtime via IconData non const). --base-href / : le piattaforme
+        # Playgama servono il gioco a dominio root.
+        run: |
+          flutter build web --release --no-tree-shake-icons --base-href /
+          cd build/web
+          zip -r ../block-rush-web.zip .
+          cd ../..
+
+      - name: Rename bundle with commit/tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="${GITHUB_SHA::7}"
+          fi
+          mkdir -p artifacts
+          mv build/block-rush-web.zip "artifacts/block-rush-web-${VERSION}.zip"
+          echo "ZIP_PATH=artifacts/block-rush-web-${VERSION}.zip" >> $GITHUB_ENV
+          echo "ZIP_NAME=block-rush-web-${VERSION}.zip" >> $GITHUB_ENV
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: artifacts/*.zip
+          retention-days: 90
+          if-no-files-found: error
+
+      # Release "latest" sempre aggiornata anche col bundle web: lo zip è
+      # pronto da caricare su developer.playgama.com senza build locali.
+      - name: Also copy as block-rush-web-latest.zip
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        run: |
+          cp "artifacts/${ZIP_NAME}" artifacts/block-rush-web-latest.zip
+
+      - name: Publish bundle to the 'latest' Release
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: artifacts/*.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

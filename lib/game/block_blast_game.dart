@@ -1,5 +1,6 @@
 import 'fair_deal.dart';
 import 'dart:math' as math;
+import 'dart:async' show unawaited;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:ui' show Canvas, Color;
 
@@ -10,6 +11,7 @@ import 'bitmap_font.dart';
 import 'layout_constants.dart';
 import 'persistence.dart';
 import 'audio.dart';
+import 'playgama_ads.dart';
 import 'ranking.dart';
 import 'rendering.dart';
 import 'shapes.dart';
@@ -124,6 +126,10 @@ class BlockBlastGame extends FlameGame {
   int revivePassed = 0;
   double reviveRadial = 0; // 0..100
   int reviveText = Design.reviveTime;
+  // Playgama: rewarded disponibile sulla piattaforma e annuncio a schermo
+  // (il countdown del revive resta fermo durante l'annuncio, 1:1 col web).
+  bool reviveAdReady = false;
+  bool reviveAdBusy = false;
 
   // === Game over ===
   double goScoreShown = 0;
@@ -156,6 +162,16 @@ class BlockBlastGame extends FlameGame {
     await storage.load();
     await audio.init();
     bestShown = storage.bestScore.toDouble();
+    // Playgama Bridge (ads + multi-piattaforma): init una tantum e provider
+    // rewarded per i suggerimenti. Su build native / fuori piattaforma
+    // degrada silenziosamente ('Annunci non disponibili').
+    unawaited(initPlaygama());
+    rewardedHintAd = () async {
+      audio.duckMusicOn();
+      final outcome = await showRewardedAd('hint');
+      audio.duckMusicOff();
+      return outcome == AdOutcome.completed;
+    };
     await world.add(GameCanvas(this));
     if (['combo', 'revive', 'gameover', 'fair', 'digits']
         .contains(previewScene)) {
@@ -324,6 +340,12 @@ class BlockBlastGame extends FlameGame {
     }
     hintBusy = true;
     try {
+      // Piattaforma senza rewarded (APK nativo, mock, CDN bloccata):
+      // fallback immediato, senza attese per il giocatore.
+      if (!await isRewardedAdReady()) {
+        hintMessage = 'Annunci non disponibili. Riprova più tardi.';
+        return;
+      }
       final completed = await rewardedHintAd!();
       if (completed && hintDialog) {
         unlockHint();
@@ -847,6 +869,8 @@ class BlockBlastGame extends FlameGame {
     revivePassed = 0;
     reviveText = Design.reviveTime;
     reviveRadial = 0;
+    reviveAdBusy = false;
+    _refreshReviveAdReady();
     addTween(Tween(
       from: blackBgOpacity,
       to: 0.80,
@@ -856,8 +880,20 @@ class BlockBlastGame extends FlameGame {
     after(1.0, _reviveTick);
   }
 
+  /// Aggiorna la disponibilità dei rewarded per il revive (async, non blocca).
+  void _refreshReviveAdReady() {
+    isRewardedAdReady().then((ready) {
+      if (state == GameState.revive) reviveAdReady = ready;
+    });
+  }
+
   void _reviveTick() {
     if (state != GameState.revive) return;
+    if (reviveAdBusy) {
+      // Rewarded a schermo: countdown in pausa (1:1 col port web).
+      after(1.0, _reviveTick);
+      return;
+    }
     if (revivePassed >= Design.reviveTime) {
       _showGameOverLayer();
       return;
@@ -914,6 +950,37 @@ class BlockBlastGame extends FlameGame {
     createShapes(revive: true);
     state = GameState.hud;
     audio.startMusic();
+  }
+
+  /// FREE CONTINUE / WATCH AD & CONTINUE: se la piattaforma ha i rewarded il
+  /// revive si sblocca con un annuncio, altrimenti è gratis (fallback 1:1 col
+  /// port web). Se l'annuncio viene chiuso prima della fine si resta nel
+  /// pannello e il countdown riprende.
+  Future<void> _continueWithAd() async {
+    if (state != GameState.revive || reviveAdBusy) return;
+    if (reviveAdReady) {
+      reviveAdBusy = true;
+      audio.duckMusicOn();
+      var outcome = AdOutcome.unavailable;
+      try {
+        outcome = await showRewardedAd('revive');
+      } finally {
+        audio.duckMusicOff();
+        reviveAdBusy = false;
+      }
+      if (outcome == AdOutcome.completed) reviveNow();
+      return;
+    }
+    reviveNow();
+  }
+
+  /// PLAY AGAIN dal game over: interstitial tra le run (il delay minimo di
+  /// 90s tra interstitial è gestito dall'SDK via playgama-bridge-config).
+  Future<void> _playAgainWithAd() async {
+    try {
+      await showInterstitialAd('game_over');
+    } catch (_) {/* mai bloccare il restart */}
+    startGame();
   }
 
   // =====================================================================
@@ -1209,7 +1276,7 @@ class BlockBlastGame extends FlameGame {
         rankingOpen();
         break;
       case 'revive_btn':
-        reviveNow();
+        _continueWithAd();
         break;
       case 'revive_skip':
         _showGameOverLayer();
@@ -1218,7 +1285,7 @@ class BlockBlastGame extends FlameGame {
         goHome();
         break;
       case 'go_reset':
-        startGame();
+        _playAgainWithAd();
         break;
       case 'ranking_close':
         rankingClose();
