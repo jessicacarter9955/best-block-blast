@@ -14,15 +14,6 @@ class GameStorage {
 
   static const String storageKey = 'Block Blast_Data';
 
-  /// Prefisso anti-JSON: shared_preferences su WEB legge i valori con
-  /// jsonDecode (con fallback a stringa raw solo se il parse FALLISCE). Un
-  /// salvataggio che è un oggetto JSON puro verrebbe quindi letto come Map e
-  /// farebbe crashare getString con "type 'Map' is not a subtype of type
-  /// 'String?'" → il gioco crashava al secondo avvio su web. Il prefisso
-  /// rende il valore NON-JSON (parse fallito → stringa raw) su ogni
-  /// piattaforma; su Android/iOS è semplicemente trasparente.
-  static const String _prefix = 'BB1:';
-
   int sfx = 1;
   int music = 1;
   int bestScore = 0;
@@ -35,14 +26,7 @@ class GameStorage {
   /// (SFX=1, Music=1, BestScore=0, Tut=1) and persists them.
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    String? raw;
-    try {
-      raw = prefs.getString(storageKey);
-    } catch (_) {
-      // Dato web in formato vecchio (JSON puro): reset pulito invece di
-      // crashare — il giocatore riparte dai default.
-      raw = null;
-    }
+    final raw = prefs.getString(storageKey);
     if (raw == null || raw.isEmpty) {
       sfx = 1;
       music = 1;
@@ -52,8 +36,7 @@ class GameStorage {
       return;
     }
     try {
-      final body = raw.startsWith(_prefix) ? raw.substring(_prefix.length) : raw;
-      final data = jsonDecode(body) as Map<String, dynamic>;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
       sfx = (data['SFX'] as num?)?.toInt() ?? 1;
       music = (data['Music'] as num?)?.toInt() ?? 1;
       bestScore = (data['BestScore'] as num?)?.toInt() ?? 0;
@@ -68,7 +51,7 @@ class GameStorage {
 
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(storageKey, '$_prefix${jsonEncode(toJson())}');
+    await prefs.setString(storageKey, jsonEncode(toJson()));
   }
 
   Map<String, dynamic> toJson() => {
