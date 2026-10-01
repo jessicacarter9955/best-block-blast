@@ -129,6 +129,15 @@ Future<bool> initPlaygama() {
 
 // -- rewarded ---------------------------------------------------------------
 
+/// True se la piattaforma supporta i rewarded (capability pura, usata per la
+/// registrazione del provider — specchio di isRewardedSupported del web).
+Future<bool> isRewardedSupported() async {
+  await initPlaygama();
+  final ad = _advertisement;
+  if (ad == null) return false;
+  return js.getProperty(ad, 'isRewardedSupported') as bool? ?? false;
+}
+
 /// True se un rewarded è pronto (piattaforma lo supporta + non occupato).
 Future<bool> isRewardedAdReady() async {
   await initPlaygama();

@@ -162,16 +162,20 @@ class BlockBlastGame extends FlameGame {
     await storage.load();
     await audio.init();
     bestShown = storage.bestScore.toDouble();
-    // Playgama Bridge (ads + multi-piattaforma): init una tantum e provider
-    // rewarded per i suggerimenti. Su build native / fuori piattaforma
-    // degrada silenziosamente ('Annunci non disponibili').
-    unawaited(initPlaygama());
-    rewardedHintAd = () async {
-      audio.duckMusicOn();
-      final outcome = await showRewardedAd('hint');
-      audio.duckMusicOff();
-      return outcome == AdOutcome.completed;
-    };
+    // Playgama Bridge (ads + multi-piattaforma), 1:1 col port web: il
+    // provider rewarded si registra SOLO se la piattaforma li supporta
+    // (come setHintAdProvider su isRewardedSupported del web); altrimenti
+    // resta null e requestHintAd mostra 'Annunci non disponibili'.
+    unawaited(initPlaygama().then((ok) async {
+      if (ok && await isRewardedSupported()) {
+        rewardedHintAd = () async {
+          audio.duckMusicOn();
+          final outcome = await showRewardedAd('hint');
+          audio.duckMusicOff();
+          return outcome == AdOutcome.completed;
+        };
+      }
+    }));
     await world.add(GameCanvas(this));
     if (['combo', 'revive', 'gameover', 'fair', 'digits']
         .contains(previewScene)) {
@@ -340,12 +344,6 @@ class BlockBlastGame extends FlameGame {
     }
     hintBusy = true;
     try {
-      // Piattaforma senza rewarded (APK nativo, mock, CDN bloccata):
-      // fallback immediato, senza attese per il giocatore.
-      if (!await isRewardedAdReady()) {
-        hintMessage = 'Annunci non disponibili. Riprova più tardi.';
-        return;
-      }
       final completed = await rewardedHintAd!();
       if (completed && hintDialog) {
         unlockHint();
@@ -880,11 +878,17 @@ class BlockBlastGame extends FlameGame {
     after(1.0, _reviveTick);
   }
 
-  /// Aggiorna la disponibilità dei rewarded per il revive (async, non blocca).
+  /// Aggiorna la disponibilità dei rewarded per il revive: check immediato +
+  /// re-check dopo l'init ritardata del bridge (1:1 col web, 1200ms).
   void _refreshReviveAdReady() {
-    isRewardedAdReady().then((ready) {
-      if (state == GameState.revive) reviveAdReady = ready;
-    });
+    Future<void> check() async {
+      if (await isRewardedAdReady() && state == GameState.revive) {
+        reviveAdReady = true;
+      }
+    }
+
+    check();
+    Future.delayed(const Duration(milliseconds: 1200), check);
   }
 
   void _reviveTick() {

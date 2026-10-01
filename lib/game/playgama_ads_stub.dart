@@ -8,6 +8,9 @@ enum AdOutcome { completed, cancelled, unavailable }
 /// Init del bridge: sempre false sulle build native.
 Future<bool> initPlaygama() async => false;
 
+/// True se la piattaforma supporta i rewarded (mai su native).
+Future<bool> isRewardedSupported() async => false;
+
 /// True solo dentro una piattaforma della rete Playgama (mai su native).
 bool get isPlaygamaPlatform => false;
 
