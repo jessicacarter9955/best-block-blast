@@ -29,45 +29,25 @@ void main() {
     }
   });
 
-  test(
-      '500 deals survive arbitrary legal choices and keep verified continuations',
-      () {
+  test('500 generated trays each have a complete replayable solution', () {
     final rng = Random(2026);
     var board = List<int?>.filled(64, null);
     for (var turn = 0; turn < 500; turn++) {
       final generated = dealFair(board, [0, 1, 2], rng);
-      final remaining = {for (final move in generated) move.slot: move.shape};
-      while (remaining.isNotEmpty) {
-        var proof = solveFair(board, remaining, budget: 300);
-        if (proof == null) {
-          proof = dealFair(board, remaining.keys.toList(), rng);
-          for (final m in proof) {
-            remaining[m.slot] = m.shape;
-          }
-        }
-        var check = List<int?>.of(board);
-        for (final move in proof) {
-          check = applyFair(check, move);
-        }
-        final legal = <FairMove>[];
-        for (final p in remaining.entries) {
-          for (var i = 0; i < 64; i++) {
-            if (fitsFair(board, p.value, i ~/ 8, i % 8))
-              legal.add(FairMove(p.key, p.value, i ~/ 8, i % 8));
-          }
-        }
-        expect(legal, isNotEmpty);
-        final chosen = legal[rng.nextInt(legal.length)];
-        board = applyFair(board, chosen);
-        remaining.remove(chosen.slot);
+      expect(generated.length, 3);
+      expect(generated.map((m) => m.slot).toSet().length, 3);
+      for (final move in generated) {
+        expect(fitsFair(board, move.shape, move.row, move.col), isTrue);
+        board = applyFair(board, move);
       }
     }
   });
 
-  test(
-      'game replaces an impossible remaining tray without changing board or score',
-      () {
+  test('loss keeps the tray fixed and preserves the last valid replay', () {
     final game = BlockBlastGame();
+    game.createShapes();
+    final proofBoard = List<int?>.of(game.replayBoard);
+    final proofMoves = List<FairMove>.of(game.replayMoves);
     game.score = 123;
     for (var y = 0; y < 8; y++) {
       for (var x = 0; x < 8; x++) {
@@ -79,14 +59,40 @@ void main() {
     game.tray[2] = TraySlot(28, 2)..placed = true;
     final before = game.grid.expand((r) => r).toList();
     game.ensureFairContinuation();
-    expect(game.fairRefreshed, isTrue);
+    expect(game.anyRemainingFits(), isFalse);
+    expect(game.tray[0]!.shapeIdx, 28);
+    expect(game.tray[1]!.shapeIdx, 28);
     expect(game.score, 123);
     expect(game.grid.expand((r) => r).toList(), before);
     expect(game.tray[2]!.placed, isTrue);
-    var next = before;
-    for (final move in game.solution) {
+    expect(game.solution, isEmpty);
+    expect(game.replayBoard, proofBoard);
+    expect(game.replayMoves, proofMoves);
+    var next = proofBoard;
+    for (final move in game.replayMoves) {
       next = applyFair(next, move);
     }
-    expect(game.solution.length, 2);
+    game.openReplay();
+    expect(game.replayOpen, isTrue);
+    expect(game.grid.expand((r) => r).toList(), before);
+    expect(game.score, 123);
+  });
+
+  test('hint requires a completed rewarded ad; cancellation never grants it',
+      () async {
+    final game = BlockBlastGame();
+    game.createShapes();
+    game.openHint();
+    await game.requestHintAd();
+    expect(game.showSolution, isFalse);
+    expect(game.hintDialog, isTrue);
+    game.rewardedHintAd = () async => false;
+    await game.requestHintAd();
+    expect(game.showSolution, isFalse);
+    game.rewardedHintAd = () async => true;
+    await game.requestHintAd();
+    expect(game.showSolution, isTrue);
+    expect(game.hintDialog, isFalse);
+    expect(game.hintBusy, isFalse);
   });
 }

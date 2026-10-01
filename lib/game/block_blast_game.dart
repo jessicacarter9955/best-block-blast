@@ -157,7 +157,8 @@ class BlockBlastGame extends FlameGame {
     await audio.init();
     bestShown = storage.bestScore.toDouble();
     await world.add(GameCanvas(this));
-    if (['combo', 'revive', 'gameover', 'fair'].contains(previewScene)) {
+    if (['combo', 'revive', 'gameover', 'fair', 'digits']
+        .contains(previewScene)) {
       state = previewScene == 'revive'
           ? GameState.revive
           : previewScene == 'gameover'
@@ -166,7 +167,8 @@ class BlockBlastGame extends FlameGame {
       score = 2480;
       goScoreShown = 2480;
       scoreShown = 2480;
-      blackBgOpacity = ['combo', 'fair'].contains(previewScene) ? 0 : 0.75;
+      blackBgOpacity =
+          ['combo', 'fair', 'digits'].contains(previewScene) ? 0 : 0.75;
       reviveText = 10;
       for (var y = 4; y < 8; y++) {
         for (var x = 0; x < 8; x++) {
@@ -178,6 +180,11 @@ class BlockBlastGame extends FlameGame {
         slot?.popT = 1;
       }
       showSolution = previewScene == 'fair';
+      if (previewScene == 'digits') {
+        score = 123456789012345;
+        scoreShown = score.toDouble();
+        bestShown = 987654321098765;
+      }
     }
   }
 
@@ -223,9 +230,13 @@ class BlockBlastGame extends FlameGame {
     earnedDisplay = null;
     noSpaceBanner = null;
     placementPending = false;
+    replayMoves = [];
+    replayBoard = [];
     solution = [];
     showSolution = false;
-    fairRefreshed = false;
+    hintDialog = false;
+    replayOpen = false;
+    hintMessage = null;
     settleCells.clear();
     dragSlot = -1;
     returningSlot = -1;
@@ -262,29 +273,82 @@ class BlockBlastGame extends FlameGame {
       tray[move.slot] = TraySlot(move.shape, colors[move.slot]);
       _spawnPopEffects(move.slot);
     }
-    fairRefreshed = false;
+    hintDialog = false;
+    replayOpen = false;
+    hintMessage = null;
+    rememberSolution();
   }
 
   List<FairMove> solution = [];
   bool showSolution = false;
-  bool fairRefreshed = false;
+  bool hintDialog = false;
   bool placementPending = false;
 
+  List<int?> replayBoard = [];
+  List<FairMove> replayMoves = [];
+  List<int> replayColors = [];
+  bool replayOpen = false;
+  double replayTime = 0;
+  bool hintBusy = false;
+  String? hintMessage;
+  Future<bool> Function()? rewardedHintAd;
+
+  void rememberSolution() {
+    if (solution.isEmpty) return;
+    replayBoard = grid.expand((r) => r).toList();
+    replayMoves = List.of(solution);
+    replayColors = List.generate(3, (i) => tray[i]?.colorIdx ?? 0);
+  }
+
   void ensureFairContinuation() {
-    final board = grid.expand((r) => r).toList();
     final remaining = <int, int>{
-      for (var i = 0; i < tray.length; i++)
-        if (tray[i] != null && !tray[i]!.placed) i: tray[i]!.shapeIdx,
+      for (var i = 0; i < 3; i++)
+        if (tray[i] != null && !tray[i]!.placed) i: tray[i]!.shapeIdx
     };
-    final found = solveFair(board, remaining);
-    fairRefreshed = found == null;
-    solution = found ?? dealFair(board, remaining.keys.toList(), rng);
-    if (fairRefreshed) {
-      for (final move in solution) {
-        tray[move.slot] = TraySlot(move.shape, tray[move.slot]!.colorIdx);
-        _spawnPopEffects(move.slot);
-      }
+    solution = solveFair(grid.expand((r) => r).toList(), remaining) ?? [];
+    rememberSolution();
+  }
+
+  void openHint() {
+    if (placementPending || tutorial.active) return;
+    onDragCancel();
+    hintDialog = true;
+    hintMessage = null;
+  }
+
+  Future<void> requestHintAd() async {
+    if (hintBusy) return;
+    if (rewardedHintAd == null) {
+      hintMessage = 'Annunci non disponibili. Riprova più tardi.';
+      return;
     }
+    hintBusy = true;
+    try {
+      final completed = await rewardedHintAd!();
+      if (completed && hintDialog) {
+        unlockHint();
+      } else {
+        hintMessage = 'Annuncio non completato: suggerimento non sbloccato.';
+      }
+    } catch (_) {
+      hintMessage = 'Annuncio non disponibile. Riprova più tardi.';
+    } finally {
+      hintBusy = false;
+    }
+  }
+
+  void unlockHint() {
+    showSolution = true;
+    hintDialog = false;
+    hintMessage = null;
+  }
+
+  void openReplay() {
+    if (replayMoves.isEmpty) return;
+    onDragCancel();
+    hintDialog = false;
+    replayTime = 0;
+    replayOpen = true;
   }
 
   /// Original "GetAvailableShapes": 5 distinct shapes that fit the board.
@@ -388,7 +452,7 @@ class BlockBlastGame extends FlameGame {
   final Vector2 finger = Vector2.zero();
 
   void onDragStart(Vector2 p) {
-    if (placementPending) return;
+    if (placementPending || hintDialog || replayOpen) return;
     if (state != GameState.hud) return;
     if (dragSlot >= 0) return;
     pressedButton = null;
@@ -550,6 +614,7 @@ class BlockBlastGame extends FlameGame {
 
   void _placeDraggedPiece(TraySlot slot) {
     placementPending = true;
+    showSolution = false;
     solution = [];
     final colorIdx = slot.colorIdx;
     final blockCount = dragTargets.length;
@@ -760,6 +825,7 @@ class BlockBlastGame extends FlameGame {
       after(delay, () => createShapes());
     } else {
       ensureFairContinuation();
+      if (!anyRemainingFits()) gameOverStart();
     }
   }
 
@@ -773,10 +839,10 @@ class BlockBlastGame extends FlameGame {
     audio.stopMusic();
     audio.sfxNoSpace();
     noSpaceBanner = NoSpaceBanner();
-    after(1.0, _reviveOpen);
+    after(1.0, _showGameOverLayer);
   }
 
-  void _reviveOpen() {
+  void reviveOpen() {
     state = GameState.revive;
     revivePassed = 0;
     reviveText = Design.reviveTime;
@@ -916,6 +982,11 @@ class BlockBlastGame extends FlameGame {
 
   @override
   void update(double dt) {
+    if (replayOpen) {
+      replayTime += dt.clamp(0.0, 0.1);
+      return;
+    }
+    if (hintDialog) return;
     if (['combo', 'revive', 'gameover'].contains(previewScene)) {
       _previewClock += dt;
       if (previewScene == 'combo') {
@@ -965,7 +1036,9 @@ class BlockBlastGame extends FlameGame {
     if (previewScene == null && score > storage.bestScore) {
       storage.setBestScore(score);
     }
-    bestShown += (storage.bestScore - bestShown) * math.min(1, dt * 6);
+    if (previewScene != 'digits') {
+      bestShown += (storage.bestScore - bestShown) * math.min(1, dt * 6);
+    }
 
     // Tray piece pop-ins (0.3s).
     for (final slot in tray) {
@@ -1093,7 +1166,25 @@ class BlockBlastGame extends FlameGame {
         storage.setSfx(!storage.sfxOn);
         break;
       case 'hud_solution':
-        showSolution = !showSolution;
+        openHint();
+        break;
+      case 'hint_close':
+        if (!hintBusy) hintDialog = false;
+        break;
+      case 'hint_ad':
+        requestHintAd();
+        break;
+      case 'hint_demo':
+        if (kDebugMode) unlockHint();
+        break;
+      case 'replay_open':
+        openReplay();
+        break;
+      case 'replay_close':
+        replayOpen = false;
+        break;
+      case 'replay_restart':
+        replayTime = 0;
         break;
       case 'hud_pause':
         pauseOpen();
@@ -1138,6 +1229,27 @@ class BlockBlastGame extends FlameGame {
   /// Hit-testing for every interactive button, per state — rects from the
   /// original layout instances (center-anchored).
   String? _buttonAt(Vector2 p) {
+    if (replayOpen) {
+      if (_contains(p, 902, 350, 88, 88)) return 'replay_close';
+      if (_contains(p, 540, 1580, 640, 100)) return 'replay_restart';
+      return null;
+    }
+    if (hintDialog) {
+      if (hintBusy) return null;
+      if (_contains(p, 902, 550, 88, 88)) return 'hint_close';
+      if (solution.isEmpty && _contains(p, 540, 1120, 712, 130)) {
+        return 'replay_open';
+      }
+      if (solution.isNotEmpty && _contains(p, 540, 1120, 712, 130)) {
+        return 'hint_ad';
+      }
+      if (kDebugMode &&
+          solution.isNotEmpty &&
+          _contains(p, 540, 1390, 600, 90)) {
+        return 'hint_demo';
+      }
+      return null;
+    }
     switch (state) {
       case GameState.home:
         if (rankingData != null) {
@@ -1165,7 +1277,7 @@ class BlockBlastGame extends FlameGame {
         }
         return null;
       case GameState.hud:
-        if (!tutorial.active && _contains(p, 540, 1820, 540, 88)) {
+        if (!tutorial.active && _contains(p, 805, Design.pauseBtnY, 120, 120)) {
           return 'hud_solution';
         }
         if (_contains(p, Design.pauseBtnX, Design.pauseBtnY,
@@ -1212,10 +1324,16 @@ class BlockBlastGame extends FlameGame {
         }
         return null;
       case GameState.revive:
+        if (replayMoves.isNotEmpty && _contains(p, 540, 1585, 650, 92)) {
+          return 'replay_open';
+        }
         if (_contains(p, 540, 1250, 712, 148)) return 'revive_btn';
         if (_contains(p, 540, 1440, 500, 90)) return 'revive_skip';
         return null;
       case GameState.gameOver:
+        if (replayMoves.isNotEmpty && _contains(p, 540, 1205, 650, 80)) {
+          return 'replay_open';
+        }
         if (_contains(p, 540, 1330, 712, 148)) return 'go_reset';
         if (_contains(p, 540, 1490, 400, 96)) return 'go_home';
         return null;

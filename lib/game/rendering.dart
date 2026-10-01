@@ -8,6 +8,8 @@ import 'block_blast_game.dart';
 import 'layout_constants.dart';
 import 'palette.dart';
 import 'shapes.dart';
+import 'fair_deal.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 /// All rendering — a visual 1:1 of the original layers:
 /// Bg -> Shadow -> Game -> Tut -> HUD -> Pause -> Revive -> GameOver -> Ranking.
@@ -30,6 +32,8 @@ extension GameRendering on BlockBlastGame {
     _drawGameOverOverlay(canvas);
     _drawPauseOverlay(canvas);
     _drawRankingOverlay(canvas);
+    _drawHintDialog(canvas);
+    _drawReplay(canvas);
   }
 
   // =====================================================================
@@ -38,21 +42,6 @@ extension GameRendering on BlockBlastGame {
 
   void _drawFairHint(Canvas canvas) {
     if (tutorial.active || state != GameState.hud) return;
-    _actionButton(
-        canvas,
-        'hud_solution',
-        showSolution ? 'NASCONDI AIUTO' : 'SOLUZIONE',
-        Icons.lightbulb_outline,
-        540,
-        1820,
-        540,
-        88,
-        labelSize: 32);
-    if (fairRefreshed) {
-      _uiText(
-          canvas, 'Pezzi aggiornati: c’è sempre una soluzione', 540, 1895, 26,
-          color: const Color(0xFF9BEFFF));
-    }
     if (!showSolution || solution.isEmpty || dragSlot >= 0) return;
     final move = solution.first;
     final shape = kShapes[move.shape];
@@ -122,7 +111,7 @@ extension GameRendering on BlockBlastGame {
 
     // Draw every slot explicitly; screenshot-derived art had merged cells.
     canvas.drawRect(
-        Rect.fromLTWH(
+        const Rect.fromLTWH(
             Rush.gridX0, Rush.gridY0, Rush.pitchX * 8, Rush.pitchY * 8),
         Paint()..color = const Color(0xFF050E32));
     for (var r = 0; r < 8; r++) {
@@ -453,29 +442,33 @@ extension GameRendering on BlockBlastGame {
     _drawGameText(
       canvas,
       scoreShown.toInt().toString(),
-      Design.width / 2,
+      560,
       Design.txtScoreY,
-      172,
+      160,
       BlockPalette.text,
       BlockPalette.scoreStroke,
       14,
+      maxWidth: 530,
     );
 
     // Best score: crown + cifre oro (1:1).
-    _crown(canvas, Design.cupX, Design.cupY, Design.cupSize);
+    _crown(canvas, 148, Design.cupY, Design.cupSize);
     // Best score centrato SOTTO la corona (come il web, richiesta utente).
     final bestText = bestShown.toInt().toString();
     _drawGameText(
       canvas,
       bestText,
-      Design.cupX,
+      148,
       Design.bestScoreY,
       92,
       BlockPalette.gold,
       const Color(0xFF5A1A66),
       7,
+      maxWidth: 240,
     );
 
+    _roundControl(canvas, 'hud_solution', Icons.question_mark_rounded, 805,
+        Design.pauseBtnY, 120);
     _roundControl(canvas, 'hud_pause', Icons.pause_rounded, Design.pauseBtnX,
         Design.pauseBtnY, Design.pauseBtnSize);
 
@@ -617,6 +610,131 @@ extension GameRendering on BlockBlastGame {
     _uiText(canvas, 'No ad required in this preview', 540, 1353, 27,
         color: const Color(0xFF92B3E8));
     _uiText(canvas, 'END RUN', 540, 1440, 34, bold: true);
+    if (replayMoves.isNotEmpty) {
+      _actionButton(canvas, 'replay_open', 'VEDI SOLUZIONE',
+          Icons.replay_rounded, 540, 1585, 650, 92,
+          labelSize: 32);
+    }
+  }
+
+  void _drawHintDialog(Canvas canvas) {
+    if (!hintDialog) return;
+    canvas.drawRect(const Rect.fromLTWH(0, 0, 1080, 1920),
+        Paint()..color = const Color(0xD908102B));
+    _panel(canvas, const Rect.fromLTWH(98, 460, 884, 1040));
+    _roundControl(canvas, 'hint_close', Icons.close_rounded, 902, 550, 88);
+    _uiText(canvas, 'UN SUGGERIMENTO?', 540, 700, 54, title: true);
+    _uiText(
+        canvas,
+        solution.isEmpty
+            ? 'La sequenza non è più disponibile.'
+            : 'Guarda un annuncio per scoprire',
+        540,
+        850,
+        34);
+    _uiText(
+        canvas,
+        solution.isEmpty
+            ? 'Rivedi le mosse prima dell’errore.'
+            : 'il prossimo pezzo e dove posizionarlo.',
+        540,
+        910,
+        32);
+    _actionButton(
+        canvas,
+        solution.isEmpty ? 'replay_open' : 'hint_ad',
+        solution.isEmpty
+            ? 'VEDI REPLAY'
+            : hintBusy
+                ? 'CARICAMENTO…'
+                : 'GUARDA ANNUNCIO',
+        Icons.play_arrow_rounded,
+        540,
+        1120,
+        712,
+        130,
+        primary: true,
+        labelSize: 40);
+    if (hintMessage != null) {
+      _uiText(canvas, hintMessage!, 540, 1250, 26,
+          color: const Color(0xFFFFD05A));
+    }
+    if (kDebugMode && solution.isNotEmpty) {
+      _actionButton(canvas, 'hint_demo', 'PROVA SUGGERIMENTO · DEMO',
+          Icons.lightbulb_outline, 540, 1390, 600, 90,
+          labelSize: 25);
+    }
+  }
+
+  void _drawReplay(Canvas canvas) {
+    if (!replayOpen || replayMoves.isEmpty) return;
+    canvas.drawRect(const Rect.fromLTWH(0, 0, 1080, 1920),
+        Paint()..color = const Color(0xF208102B));
+    _panel(canvas, const Rect.fromLTWH(98, 260, 884, 1400));
+    _roundControl(canvas, 'replay_close', Icons.close_rounded, 902, 350, 88);
+    _uiText(canvas, 'UNA SOLUZIONE POSSIBILE', 540, 415, 44, title: true);
+    final completed = math.min(replayMoves.length, (replayTime / 3).floor());
+    final active =
+        completed < replayMoves.length ? replayMoves[completed] : null;
+    var board = List<int?>.of(replayBoard);
+    for (var i = 0; i < completed; i++) {
+      board = applyFair(board, replayMoves[i],
+          color: replayColors[replayMoves[i].slot]);
+    }
+    final highlight = <int>{};
+    if (active != null) {
+      final shape = kShapes[active.shape];
+      for (var r = 0; r < shape.length; r++) {
+        for (var c = 0; c < shape[r].length; c++) {
+          if (shape[r][c] == 1) {
+            highlight.add((active.row + r) * 8 + active.col + c);
+          }
+        }
+      }
+    }
+    const cell = 88.0, left = 188.0, top = 570.0;
+    for (var i = 0; i < 64; i++) {
+      final x = left + (i % 8) * cell, y = top + (i ~/ 8) * cell;
+      final rect = Rect.fromLTWH(x + 2, y + 2, cell - 4, cell - 4);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(9)),
+          Paint()..color = const Color(0xFF14295C));
+      if (board[i] != null) {
+        sprites
+            .get('Block', frame: board[i]!)
+            .render(canvas, position: Vector2(x, y), size: Vector2.all(cell));
+      }
+      if (highlight.contains(i)) {
+        canvas.saveLayer(
+            null,
+            Paint()
+              ..color = Color.fromRGBO(
+                  255, 255, 255, .55 + .35 * math.sin(replayTime * 5).abs()));
+        sprites
+            .get('Block', frame: replayColors[active!.slot])
+            .render(canvas, position: Vector2(x, y), size: Vector2.all(cell));
+        canvas.restore();
+        canvas.drawRect(
+            rect,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 3
+              ..color = const Color(0xFFAAFFF0));
+      }
+    }
+    _uiText(
+        canvas,
+        active == null
+            ? 'Tutti i pezzi trovavano spazio.'
+            : 'Mossa ${completed + 1}/${replayMoves.length} · pezzo ${active.slot + 1}',
+        540,
+        1360,
+        34,
+        color: const Color(0xFFAAFFF0));
+    _uiText(canvas, 'Replay dimostrativo · punteggio invariato', 540, 1430, 27,
+        color: const Color(0xFFB7CDF4));
+    _actionButton(canvas, 'replay_restart', 'RIPETI REPLAY',
+        Icons.replay_rounded, 540, 1580, 640, 100,
+        labelSize: 34);
   }
 
   void _drawGameOverOverlay(Canvas canvas) {
@@ -630,8 +748,14 @@ extension GameRendering on BlockBlastGame {
         color: const Color(0xFF92B3E8), bold: true);
     _drawGameText(canvas, _formatScore(goScoreShown.toInt()), 540, 1020, 112,
         const Color(0xFFFFFFFF), const Color(0xFF123274), 8);
-    _uiText(canvas, 'BEST  ${_formatScore(storage.bestScore)}', 540, 1135, 40,
-        color: const Color(0xFFFFD05A), bold: true);
+    _drawGameText(canvas, 'BEST  ${_formatScore(storage.bestScore)}', 540, 1135,
+        40, const Color(0xFFFFD05A), const Color(0xFF123274), 2,
+        maxWidth: 760);
+    if (replayMoves.isNotEmpty) {
+      _actionButton(canvas, 'replay_open', 'VEDI SOLUZIONE',
+          Icons.replay_rounded, 540, 1205, 650, 80,
+          labelSize: 34);
+    }
     _actionButton(canvas, 'go_reset', 'PLAY AGAIN', Icons.refresh_rounded, 540,
         1330, 712, 148,
         primary: true, labelSize: 50);
@@ -752,6 +876,8 @@ extension GameRendering on BlockBlastGame {
       _uiText(canvas, isYou ? 'You' : entry.name, 288, y, 34,
           align: TextAlign.left, maxWidth: 330, bold: isYou);
       _uiText(canvas, _formatScore(entry.score), 902, y, 34,
+          shrink: true,
+          maxWidth: 250,
           align: TextAlign.right,
           bold: true,
           color: isYou ? const Color(0xFF8CECF3) : const Color(0xFFF4F8FF));
@@ -773,7 +899,11 @@ extension GameRendering on BlockBlastGame {
     _uiText(canvas, 'Rank #${data.yourRank}', 260, 1601, 32,
         align: TextAlign.left, bold: true);
     _uiText(canvas, _formatScore(storage.bestScore), 900, 1580, 46,
-        align: TextAlign.right, color: const Color(0xFFFFD05A), bold: true);
+        shrink: true,
+        maxWidth: 340,
+        align: TextAlign.right,
+        color: const Color(0xFFFFD05A),
+        bold: true);
     _uiText(canvas, 'Keep playing. Keep climbing.', 540, 1698, 28,
         color: const Color(0xFF92B3E8));
   }
@@ -1100,7 +1230,20 @@ extension GameRendering on BlockBlastGame {
       bool title = false,
       bool bold = false,
       TextAlign align = TextAlign.center,
-      double maxWidth = double.infinity}) {
+      double maxWidth = double.infinity,
+      bool shrink = false}) {
+    if (shrink && maxWidth.isFinite) {
+      final measure = TextPainter(
+          text: TextSpan(
+              text: text,
+              style: TextStyle(
+                  fontFamily: title ? 'LuckiestGuy' : 'Arial',
+                  fontSize: size,
+                  fontWeight: bold ? FontWeight.w700 : FontWeight.w500)),
+          textDirection: TextDirection.ltr)
+        ..layout();
+      if (measure.width > maxWidth) size *= maxWidth / measure.width;
+    }
     final painter = TextPainter(
         text: TextSpan(
             text: text,
@@ -1126,7 +1269,15 @@ extension GameRendering on BlockBlastGame {
   /// Testo di gioco 1:1 (font Luckiest Guy): prima lo stroke, poi il fill,
   /// centrato su (cx, cy) — come lo score bianco/bordo blu del riferimento.
   void _drawGameText(Canvas canvas, String text, double cx, double cy,
-      double size, Color fill, Color stroke, double strokeW) {
+      double size, Color fill, Color stroke, double strokeW,
+      {double? maxWidth}) {
+    final measured = _measureGameText(text, size);
+    final available = maxWidth ?? 940.0;
+    if (measured + strokeW > available) {
+      final scale = available / (measured + strokeW);
+      size *= scale;
+      strokeW *= scale;
+    }
     final fillTp = _gameTextPainter(text, size, fill, null);
     final dx = cx - fillTp.width / 2;
     final dy = cy - fillTp.height / 2;

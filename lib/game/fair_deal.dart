@@ -21,14 +21,14 @@ bool fitsFair(List<int?> board, int shape, int row, int col) {
   return true;
 }
 
-List<int?> applyFair(List<int?> board, FairMove move) {
+List<int?> applyFair(List<int?> board, FairMove move, {int color = 0}) {
   if (!fitsFair(board, move.shape, move.row, move.col)) {
     throw StateError('Invalid solution move');
   }
   final next = List<int?>.of(board), shape = kShapes[move.shape];
   for (var r = 0; r < shape.length; r++) {
     for (var c = 0; c < shape[r].length; c++) {
-      if (shape[r][c] == 1) next[(move.row + r) * 8 + move.col + c] = 0;
+      if (shape[r][c] == 1) next[(move.row + r) * 8 + move.col + c] = color;
     }
   }
   final rows = <int>[], cols = <int>[];
