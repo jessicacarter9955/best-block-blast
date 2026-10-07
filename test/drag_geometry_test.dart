@@ -70,10 +70,10 @@ void main() {
 
     const column = 4;
     const row = 3;
-    final cellX = game.landscapeBoardX +
+    final cellX = BlockBlastGame.landscapeBoardX +
         (Design.gridOriginX + column * Design.bigSize) *
             BlockBlastGame.landscapeBoardScale;
-    final cellY = game.landscapeBoardY +
+    final cellY = BlockBlastGame.landscapeBoardY +
         (Design.gridOriginY + row * Design.cellHeight) *
             BlockBlastGame.landscapeBoardScale;
     game.onDragDelta(Vector2(cellX - game.finger.x,
