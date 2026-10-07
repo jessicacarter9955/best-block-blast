@@ -16,7 +16,9 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 extension GameRendering on BlockBlastGame {
   void renderWorld(Canvas canvas) {
     if (isLandscape) {
-      final background = sprites.get(state == GameState.home ? 'BgHome' : 'Bg');
+      // Keep wide fills abstract; BgHome has a baked-in logo and is drawn only
+      // in the centered, aspect-preserving home composition below.
+      final background = sprites.get('Bg');
       background.render(canvas,
           position: Vector2.zero(), size: Vector2(1920, 1080));
       if (state == GameState.home) {
