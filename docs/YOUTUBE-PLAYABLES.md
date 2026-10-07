@@ -1,24 +1,20 @@
-# YouTube Playables build track
+# YouTube Playables branch
 
-Branch: `codex/youtube-playables`.
+This branch builds the original Lumen Loom puzzle in responsive portrait and landscape layouts. The browser build used for testing is not the Playables release: the workflow adds the official SDK script to the packaged HTML and the app then uses platform save, language, lifecycle, rewarded-ad and interstitial APIs.
 
-The branch build injects the official YouTube Playables SDK before Flutter starts and compiles with `YOUTUBE_PLAYABLES_BUILD=true`. It routes save data to YouTube cloud storage, reads YouTube's locale, sends first-frame and game-ready signals, handles YouTube audio and pause/resume events, submits a new best score, and uses the YouTube rewarded/interstitial APIs. It does not load the Playgama Bridge CDN. The workflow checks the archive's size, file count and file names and publishes a test artifact.
+## Checks completed by CI
 
-## Still required before submission
+- Flutter tests and release web compilation.
+- SDK script placement before Flutter bootstrap.
+- Packaged file count and supported path characters.
+- ZIP size below the current 30 MiB initial-download limit.
 
-- **Landscape is not finished.** The game still uses its 1080×1920 portrait layout. Test on real wide viewports and redesign/reflow the board, trays, score and controls for landscape before calling the game adapted. The existing portrait camera is not proof of landscape support.
-- **Originality and rights are unresolved.** Current repository documentation says the logic is transcribed from a decompiled Construct 3 game and that sprite assets are extracted. YouTube rejects copied or lightly reworked games. Do not submit this build as an original game until the mechanics, name and assets have been replaced or you have documented rights and YouTube accepts the resulting work.
-- Run the YouTube Playables SDK test suite and bundle analyzer in the developer portal. The GitHub archive-size check is only an early check, not the portal's initial-download measurement or certification.
-- Test touch and mouse input, audio mute/resume, pause/resume, cloud saves across restarts, score submission, first-load time, and every declared locale in the YouTube environment.
-- Apply to the Playables program; developer access is limited/early access.
+## Account-owner checks before submission
 
-## Local build
+- Confirm Playables access, package the latest artifact, and run YouTube's current SDK validation tools.
+- Verify the game at real portrait and landscape sizes, including rotation, touch input and safe areas.
+- Verify first-frame/game-ready timing, mute state, pause/resume, cloud save restore and ad outcomes in the YouTube host.
+- Review the content rating, privacy disclosures, title, icon and store listing.
+- Clear the product name and every shipped asset for ownership and trademark conflicts.
 
-```bash
-flutter pub get
-flutter test
-flutter build web --release --no-tree-shake-icons --base-href / --dart-define=YOUTUBE_PLAYABLES_BUILD=true
-python3 tool/prepare_youtube_playables.py
-```
-
-The Playables SDK is loaded only in this branch's built `index.html`; the ordinary Playgama web release does not include that SDK script.
+The game contains no audio playback. The SDK audio-state event is observed so the host lifecycle remains connected; adding sound later requires honoring the host's enabled/disabled state.

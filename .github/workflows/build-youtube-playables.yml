@@ -39,7 +39,7 @@ jobs:
                      if not re.fullmatch(r"[A-Za-z0-9_./-]+", p.relative_to(root).as_posix())]
           if invalid:
               raise SystemExit(f"Unsupported bundle file names: {invalid[:10]}")
-          output = Path("artifacts/block-rush-youtube-playables.zip")
+          output = Path("artifacts/lumen-loom-youtube-playables.zip")
           output.parent.mkdir(parents=True, exist_ok=True)
           with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
               for path in files:
@@ -52,7 +52,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: block-rush-youtube-playables
-          path: artifacts/block-rush-youtube-playables.zip
+          name: lumen-loom-youtube-playables
+          path: artifacts/lumen-loom-youtube-playables.zip
           if-no-files-found: error
           retention-days: 90

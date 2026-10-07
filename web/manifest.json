@@ -1,35 +1,11 @@
 {
-    "name": "Block Rush",
-    "short_name": "Block Rush",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#0A1755",
-    "theme_color": "#0A1755",
-    "description": "A colorful block-clearing puzzle game.",
-    "orientation": "any",
-    "prefer_related_applications": false,
-    "icons": [
-        {
-            "src": "icons/Icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/Icon-512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/Icon-maskable-192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "maskable"
-        },
-        {
-            "src": "icons/Icon-maskable-512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-        }
-    ]
+  "name": "Lumen Loom",
+  "short_name": "Lumen Loom",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#070a21",
+  "theme_color": "#111735",
+  "description": "Guide light through a constellation of mirrors and crystals.",
+  "orientation": "any",
+  "prefer_related_applications": false
 }

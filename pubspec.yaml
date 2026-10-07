@@ -1,5 +1,5 @@
-name: block_rush
-description: Puzzle game built with Flutter and Flame for Android and Web.
+name: lumen_loom
+description: An original light-routing puzzle game.
 publish_to: "none"
 version: 1.0.0+4
 
@@ -10,11 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flame: 1.20.0
-  flame_audio: ^2.10.0
-  audioplayers: ^6.1.0
   shared_preferences: ^2.3.2
-  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
@@ -23,18 +19,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/audio/
-    - assets/audio/score/
-    - assets/audio/cheerful/
-    - assets/sprites-named/
-    - assets/rush/
-    # manifest.json is in the same folder, listed above
-    - assets/data/ranking.json
-  fonts:
-    - family: LuckiestGuy
-      fonts:
-        - asset: assets/fonts/LuckiestGuy.ttf
-    - family: Riffic
-      fonts:
-        - asset: assets/fonts/Riffic.ttf

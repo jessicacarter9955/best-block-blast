@@ -1,10 +1,4 @@
-name: Build Playgama Web Bundle
-
-# Builda il bundle web (Flutter) pronto per la pubblicazione multi-piattaforma
-# con Playgama (YouTube Playables, CrazyGames, Poki, Telegram, ...).
-# A OGNI push su master pubblica block-rush-web-latest.zip nella Release
-# "latest": è lo zip da caricare su https://developer.playgama.com
-# (index.html alla radice, playgama-bridge-config.json incluso).
+name: Build Web Bundle
 
 on:
   push:
@@ -15,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    name: Flutter Web (Playgama bundle)
+    name: Flutter Web bundle
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -35,17 +29,14 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Test fair deals and drag geometry
+      - name: Test puzzle routes
         run: flutter test
 
-      - name: Build web bundle (root base href, zipped for Playgama)
-        # --no-tree-shake-icons come la build APK (icone Material usate a
-        # runtime via IconData non const). --base-href / : le piattaforme
-        # Playgama servono il gioco a dominio root.
+      - name: Build web bundle
         run: |
-          flutter build web --release --no-tree-shake-icons --base-href /
+          flutter build web --release --base-href /
           cd build/web
-          zip -r ../block-rush-web.zip .
+          zip -r ../lumen-loom-web.zip .
           cd ../..
 
       - name: Rename bundle with commit/tag
@@ -56,9 +47,9 @@ jobs:
             VERSION="${GITHUB_SHA::7}"
           fi
           mkdir -p artifacts
-          mv build/block-rush-web.zip "artifacts/block-rush-web-${VERSION}.zip"
-          echo "ZIP_PATH=artifacts/block-rush-web-${VERSION}.zip" >> $GITHUB_ENV
-          echo "ZIP_NAME=block-rush-web-${VERSION}.zip" >> $GITHUB_ENV
+          mv build/lumen-loom-web.zip "artifacts/lumen-loom-web-${VERSION}.zip"
+          echo "ZIP_PATH=artifacts/lumen-loom-web-${VERSION}.zip" >> $GITHUB_ENV
+          echo "ZIP_NAME=lumen-loom-web-${VERSION}.zip" >> $GITHUB_ENV
 
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v4
@@ -68,12 +59,10 @@ jobs:
           retention-days: 90
           if-no-files-found: error
 
-      # Release "latest" sempre aggiornata anche col bundle web: lo zip è
-      # pronto da caricare su developer.playgama.com senza build locali.
-      - name: Also copy as block-rush-web-latest.zip
+      - name: Also copy as lumen-loom-web-latest.zip
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
         run: |
-          cp "artifacts/${ZIP_NAME}" artifacts/block-rush-web-latest.zip
+          cp "artifacts/${ZIP_NAME}" artifacts/lumen-loom-web-latest.zip
 
       - name: Publish bundle to the 'latest' Release
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
