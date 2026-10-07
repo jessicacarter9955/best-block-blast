@@ -175,7 +175,7 @@ const puzzleLevels = <PuzzleLevel>[
       math.Point<int>(0, 3),
       math.Point<int>(3, 2),
       math.Point<int>(1, 1),
-      math.Point<int>(5, 3),
+      math.Point<int>(2, 3),
     ],
   ),
 ];
