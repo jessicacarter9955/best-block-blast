@@ -1,74 +1,27 @@
-# Playgama Bridge — Ads & multi-piattaforma (Flutter)
+# Playgama publishing
 
-Block Rush integra [Playgama Bridge](https://github.com/Playgama/bridge)
-(CDN `bridge.playgama.com`): **un'unica integrazione per pubblicare su 20+
-piattaforme**, tra cui **YouTube Playables**, CrazyGames, Poki,
-GameDistribution, Telegram, TikTok, Yandex Games, Facebook, Discord, Reddit,
-MSN, GameSnacks, Samsung, Huawei, VK e altre.
+The Flutter web build integrates [Playgama Bridge](https://wiki.playgama.com/playgama/bridge-sdk/api) for ads, player storage, host language, game-ready notification, pause and audio events.
 
-Il port Flutter è specchio 1:1 dell'integrazione del port web
-(`block-rush` → `src/lib/playgama.ts`): stesse logiche, stessi fallback,
-stessi placement.
+The web wrapper is in `lib/game/playgama_ads_web.dart`; native builds use the safe no-op wrapper in `lib/game/playgama_ads_stub.dart`. The game saves settings, tutorial state and best score through Bridge Storage when hosted on a Playgama platform. The ordinary browser build uses its normal local save. Visible interface text supports English, Italian and Russian and reads the active host language after SDK initialization.
 
-## Cosa è integrato
+Ads are requested at game over and when the player opts into a hint or revive. Music and sound effects are muted during ads and host-requested pauses. The first interactive game frame sends `game_ready`.
 
-| Punto del gioco | Formato | Note |
-| --- | --- | --- |
-| Suggerimento (`?` in partita) | **Rewarded** | `GUARDA ANNUNCIO` → mostra il pezzo da piazzare e le celle |
-| Revive (`ONE MORE CHANCE`) | **Rewarded** | `WATCH AD & CONTINUE` con countdown in pausa durante l'annuncio; senza ads → `FREE CONTINUE` |
-| `PLAY AGAIN` dal game over | **Interstitial** | delay minimo 90s gestito dall'SDK |
+## Uploading a build
 
-File chiave:
+1. Wait for the `Build Playgama Web Bundle` workflow on `master` to finish successfully.
+2. Download `block-rush-web-latest.zip` from the [latest release](https://github.com/jessicacarter9955/best-block-blast/releases/latest). It contains `index.html` at the ZIP root.
+3. Upload it in the [Playgama developer dashboard](https://developer.playgama.com/applications/cmuplfi7601uipz0hhf5s8tci), fill the title, game description, instructions, devices, orientation and languages, then test with Playgama's QA tools before submitting.
 
-- `lib/game/playgama_ads.dart` — barrel: export condizionale web/stub
-- `lib/game/playgama_ads_web.dart` — wrapper web: caricamento CDN, init,
-  `showRewardedAd()`, `showInterstitialAd()`, `isRewardedAdReady()`,
-  watchdog 30s, degradazione graceful (via `dart:js_util`)
-- `lib/game/playgama_ads_stub.dart` — no-op per le build native (APK):
-  nessun annuncio, mai crash
-- `web/playgama-bridge-config.json` — config SDK (safe-area, delay
-  interstitial, preload dei placement `hint` / `game_over`)
-- `lib/game/audio.dart` — `duckMusicOn()`/`duckMusicOff()`: la musica tace
-  durante gli annunci e riprende dopo (specchio del port web)
-- `lib/game/block_blast_game.dart` — provider `rewardedHintAd`, revive con
-  ad gating, `_playAgainWithAd()` con interstitial
-- `lib/game/rendering.dart` — label dinamiche del pannello revive
+Do not declare languages that have not been checked in the submitted build. Review the dashboard's current moderation feedback and platform-specific requirements before choosing distribution partners.
 
-## Degradazione graceful (regola d'oro)
+## Rights and ownership check before submission
 
-Sull'APK Android (build nativa) il wrapper è uno stub: zero annunci, zero
-reti, zero crash. Su web fuori dalle piattaforme (dev locale, hosting
-normale) il bridge risponde con valori sicuri: `isRewardedSupported =
-false` → l'UI mostra i fallback (`Annunci non disponibili. Riprova più
-tardi.` / `FREE CONTINUE`). Se la CDN è bloccata (AdBlock/rete) il gioco
-parte comunque al 100%. Mai bloccare il gioco per colpa degli ads.
+The repository records that the current game logic was transcribed from a decompiled Construct 3 game and that many images are marked `extracted`. This is a material rights and originality issue. Confirm you own or have a written license for each reused source-game element and for the right to sublicense it to Playgama and its distribution partners. A new title, colors or added UI do not by themselves establish an original game.
 
-## Pubblicare su Playgama (e YouTube Playables)
+Check the source and license for every asset group: extracted sprite sheets under `assets/sprites-named/`; the crown, backgrounds, blocks and controls under `assets/rush/`; all sound and music under `assets/audio/`; the bundled fonts under `assets/fonts/`; and the game name, crown/logo and any reference to another game's branding. Keep source files, licenses, receipts and permission emails together. The generated backgrounds and crown also need a review of the image-generation service's terms and any source-image rights.
 
-1. Scarica **`block-rush-web-latest.zip`** dalla Release
-   https://github.com/jessicacarter9955/best-block-blast/releases/latest
-   (lo pubblica il workflow `Build Playgama Web Bundle` a ogni push:
-   `index.html` alla radice, config e asset inclusi, base href `/`).
-2. Crea/entra nel cabinet su **https://developer.playgama.com**.
-3. Nuovo gioco → carica lo zip + cover/screenshot.
-4. Scegli le piattaforme di destinazione (YouTube Playables, CrazyGames,
-   Poki, ...): il bridge rileva da solo la piattaforma e attiva gli
-   annunci giusti.
-5. Sandbox test → submit per review. Gli incassi arrivano nel cabinet.
+Playgama states that the developer keeps rights but grants distribution/sublicensing rights as part of its publishing terms. Read and accept those terms only after the ownership checks are complete.
 
-Tool utili: [config editor](https://playgama.github.io/bridge-config-editor/),
-[DevTools Chrome](https://chromewebstore.google.com/detail/playgama-bridge-devtools/mldhijegcmagkcchjmenafiipkhjlppo),
-[wiki](https://wiki.playgama.com/playgama/bridge-sdk/getting-started),
-[Discord](https://discord.gg/pzqd2upxr8).
+## YouTube Playables branch
 
-## Test locali
-
-```bash
-flutter run -d chrome            # dev: bridge init in console, fallback ads
-flutter build web --release --no-tree-shake-icons --base-href /
-python3 -m http.server 8923 --directory build/web
-```
-
-In dev (`mock`/`standalone`) il rewarded non è supportato: il dialogo
-suggerimento mostra il fallback e il revive resta `FREE CONTINUE` —
-comportamento voluto, identico al port web.
+The separate `codex/youtube-playables` branch builds with YouTube's SDK, cloud saves, audio and pause callbacks, language, first-frame/game-ready notifications, and a bundle-size/file-name check. This is a technical submission track, not a claim of certification: the current game still needs a purpose-built landscape layout and a demonstrably original game concept before it can meet YouTube's review criteria. See the branch's workflow and `docs/YOUTUBE-PLAYABLES.md`.

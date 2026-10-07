@@ -15,6 +15,34 @@ enum AdOutcome { completed, cancelled, unavailable }
 
 const String _cdnSrc =
     'https://bridge.playgama.com/v2/stable/playgama-bridge.js';
+const bool isYoutubePlayablesBuild =
+    bool.fromEnvironment('YOUTUBE_PLAYABLES_BUILD');
+
+Object? get _youtube => js.getProperty(js.globalThis, 'ytgame');
+
+Future<bool> initYoutubePlayables() async => isYoutubePlayablesBuild && _youtube != null;
+
+Future<void> sendYoutubeScore(int value) async {
+  if (!isYoutubePlayablesBuild || value < 0) return;
+  try {
+    final engagement = js.getProperty(_youtube!, 'engagement');
+    final score = js.newObject();
+    js.setProperty(score, 'value', value);
+    await js.promiseToFuture<dynamic>(
+        js.callMethod(engagement, 'sendScore', [score]));
+  } catch (_) {}
+}
+
+Future<String> youtubeLanguage() async {
+  try {
+    final system = js.getProperty(_youtube!, 'system');
+    final result = await js.promiseToFuture<dynamic>(
+        js.callMethod(system, 'getLanguage', []));
+    return (result as String).toLowerCase().split(RegExp('[-_]')).first;
+  } catch (_) {
+    return 'en';
+  }
+}
 
 // Watchdog di rete: se dopo 30s non è successo nulla, scongella il gioco.
 const Duration _watchdog = Duration(seconds: 30);
@@ -81,7 +109,105 @@ Future<void> _loadBridgeScript() {
   } catch (e) {
     if (!completer.isCompleted) completer.completeError(e);
   }
-  return completer.future;
+  return completer.future.timeout(const Duration(seconds: 8));
+}
+
+/// Language chosen by the hosting platform. Resolve after Bridge init.
+String get playgamaLanguage {
+  final platform = _bridge == null ? null : js.getProperty(_bridge!, 'platform');
+  return platform == null
+      ? 'en'
+      : ((js.getProperty(platform, 'language') as String?) ?? 'en')
+          .toLowerCase()
+          .split(RegExp('[-_]'))
+          .first;
+}
+
+/// Loads the saved player payload through Bridge Storage where available.
+Future<String?> loadBridgeSave() async {
+  if (isYoutubePlayablesBuild) {
+    try {
+      final game = js.getProperty(_youtube!, 'game');
+      return await js.promiseToFuture<String>(js.callMethod(game, 'loadData', []));
+    } catch (_) {
+      return null;
+    }
+  }
+  final bridge = _bridge;
+  if (bridge == null) return null;
+  try {
+    final storage = js.getProperty(bridge, 'storage');
+    final result = await js.promiseToFuture<dynamic>(
+        js.callMethod(storage, 'get', [['_block_rush_save']]));
+    final value = js.getProperty(result, '0');
+    return value is String ? value : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<bool> saveBridgeData(String value) async {
+  if (isYoutubePlayablesBuild) {
+    try {
+      final game = js.getProperty(_youtube!, 'game');
+      await js.promiseToFuture<dynamic>(js.callMethod(game, 'saveData', [value]));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+  final bridge = _bridge;
+  if (bridge == null) return false;
+  try {
+    final storage = js.getProperty(bridge, 'storage');
+    await js.promiseToFuture<dynamic>(js.callMethod(
+        storage, 'set', [['_block_rush_save'], [value]]));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+void sendGameReady() {
+  try {
+    if (isYoutubePlayablesBuild) {
+      final game = js.getProperty(_youtube!, 'game');
+      js.callMethod(game, 'firstFrameReady', []);
+      js.callMethod(game, 'gameReady', []);
+      return;
+    }
+    final platform = js.getProperty(_bridge!, 'platform');
+    js.callMethod(platform, 'sendMessage', ['game_ready']);
+  } catch (_) {}
+}
+
+/// Connect host lifecycle controls after initialization.
+void listenToPlatform({
+  required void Function(bool paused) onPause,
+  required void Function(bool enabled) onAudio,
+}) {
+  try {
+    if (isYoutubePlayablesBuild) {
+      final system = js.getProperty(_youtube!, 'system');
+      js.callMethod(system, 'onPause', [js.allowInterop(() => onPause(true))]);
+      js.callMethod(system, 'onResume', [js.allowInterop(() => onPause(false))]);
+      js.callMethod(system, 'onAudioEnabledChange', [
+        js.allowInterop((dynamic enabled) => onAudio(enabled == true))
+      ]);
+      onAudio(js.callMethod(system, 'isAudioEnabled', []) == true);
+      return;
+    }
+    final bridge = _bridge!;
+    final platform = js.getProperty(bridge, 'platform');
+    final events = js.getProperty(bridge, 'EVENT_NAME');
+    final pauseEvent = js.getProperty(events, 'PAUSE_STATE_CHANGED');
+    final audioEvent = js.getProperty(events, 'AUDIO_STATE_CHANGED');
+    js.callMethod(platform, 'on', [pauseEvent,
+      js.allowInterop((dynamic value) => onPause(value == true))]);
+    js.callMethod(platform, 'on', [audioEvent,
+      js.allowInterop((dynamic value) => onAudio(value == true))]);
+    onAudio(js.getProperty(platform, 'isAudioEnabled') != false);
+  } catch (_) {}
 }
 
 /// Percorso del config derivato dall'URL della pagina (l'equivalente del
@@ -102,6 +228,7 @@ String _configFilePath() {
 
 /// Inizializza il bridge; risolve false se CDN/config non raggiungibili.
 Future<bool> initPlaygama() {
+  if (isYoutubePlayablesBuild) return Future.value(false);
   final existing = _initFuture;
   if (existing != null) return existing;
   _initFuture = (() async {
@@ -132,6 +259,13 @@ Future<bool> initPlaygama() {
 /// True se la piattaforma supporta i rewarded (capability pura, usata per la
 /// registrazione del provider — specchio di isRewardedSupported del web).
 Future<bool> isRewardedSupported() async {
+  if (isYoutubePlayablesBuild) {
+    try {
+      return js.getProperty(_youtube!, 'IN_PLAYABLES_ENV') == true;
+    } catch (_) {
+      return false;
+    }
+  }
   await initPlaygama();
   final ad = _advertisement;
   if (ad == null) return false;
@@ -140,6 +274,7 @@ Future<bool> isRewardedSupported() async {
 
 /// True se un rewarded è pronto (piattaforma lo supporta + non occupato).
 Future<bool> isRewardedAdReady() async {
+  if (isYoutubePlayablesBuild) return isRewardedSupported();
   await initPlaygama();
   final ad = _advertisement;
   if (ad == null) return false;
@@ -155,6 +290,17 @@ Future<bool> isRewardedAdReady() async {
 /// - cancelled  : chiuso prima della fine o fallito → niente ricompensa
 /// - unavailable: piattaforma senza rewarded / bridge assente
 Future<AdOutcome> showRewardedAd(String placement) async {
+  if (isYoutubePlayablesBuild) {
+    if (!await isRewardedSupported()) return AdOutcome.unavailable;
+    try {
+      final ads = js.getProperty(_youtube!, 'ads');
+      final result = await js.promiseToFuture<dynamic>(
+          js.callMethod(ads, 'requestRewardedAd', [placement]));
+      return result == true ? AdOutcome.completed : AdOutcome.cancelled;
+    } catch (_) {
+      return AdOutcome.unavailable;
+    }
+  }
   await initPlaygama();
   final ad = _advertisement;
   if (ad == null) return AdOutcome.unavailable;
@@ -212,6 +358,17 @@ Future<AdOutcome> showRewardedAd(String placement) async {
 /// L'SDK applica da solo il minimumDelayBetweenInterstitial del config.
 /// Risolve true se l'annuncio è stato mostrato e chiuso.
 Future<bool> showInterstitialAd(String placement) async {
+  if (isYoutubePlayablesBuild) {
+    if (!await isRewardedSupported()) return false;
+    try {
+      final ads = js.getProperty(_youtube!, 'ads');
+      await js.promiseToFuture<dynamic>(
+          js.callMethod(ads, 'requestInterstitialAd', []));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
   await initPlaygama();
   final ad = _advertisement;
   if (ad == null) return false;

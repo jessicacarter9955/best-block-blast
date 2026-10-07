@@ -1,6 +1,6 @@
 import 'dart:math';
-import 'package:chocoblock/game/fair_deal.dart';
-import 'package:chocoblock/game/block_blast_game.dart';
+import 'package:block_rush/game/fair_deal.dart';
+import 'package:block_rush/game/block_blast_game.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,4 +1,4 @@
-name: chocoblock
+name: block_rush
 description: Puzzle game built with Flutter and Flame for Android and Web.
 publish_to: "none"
 version: 1.0.0+4

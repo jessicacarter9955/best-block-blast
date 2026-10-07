@@ -14,6 +14,10 @@ class GameAudio {
   bool _initialized = false;
   bool _musicActive = false;
   bool _musicWasPlaying = false;
+  bool _hostAudioEnabled = true;
+  bool _hostPaused = false;
+  bool _adShowing = false;
+  bool _hostSuspendedMusic = false;
 
   bool get isMusicPlaying => _musicActive;
 
@@ -52,15 +56,53 @@ class GameAudio {
   void startMusic() {
     if (!musicOn) return;
     _musicActive = true;
+    if (!_canPlay) {
+      _hostSuspendedMusic = true;
+      return;
+    }
     try {
       FlameAudio.bgm.initialize();
       FlameAudio.bgm.play('music.mp3', volume: _musicVolume);
     } catch (_) {}
   }
 
+  bool get _canPlay => _hostAudioEnabled && !_hostPaused && !_adShowing;
+
+  void setAdShowing(bool showing) {
+    if (_adShowing == showing) return;
+    _adShowing = showing;
+    _syncMusicForHost();
+  }
+
+  void setHostAudioEnabled(bool enabled) {
+    if (_hostAudioEnabled == enabled) return;
+    _hostAudioEnabled = enabled;
+    _syncMusicForHost();
+  }
+
+  void setHostPaused(bool paused) {
+    if (_hostPaused == paused) return;
+    _hostPaused = paused;
+    _syncMusicForHost();
+  }
+
+  void _syncMusicForHost() {
+    if (!_canPlay) {
+      _hostSuspendedMusic = _musicActive;
+      try { FlameAudio.bgm.stop(); } catch (_) {}
+    } else if (_hostSuspendedMusic && _musicActive && musicOn) {
+      _hostSuspendedMusic = false;
+      try {
+        FlameAudio.bgm.initialize();
+        FlameAudio.bgm.play('music.mp3', volume: _musicVolume);
+      } catch (_) {}
+    }
+  }
+
   void stopMusic() {
     _musicActive = false;
     _musicWasPlaying = false;
+    _hostSuspendedMusic = false;
     try {
       FlameAudio.bgm.stop();
     } catch (_) {}
@@ -90,7 +132,7 @@ class GameAudio {
   // === SFX (volumes mapped from the original dB values) ===
 
   void play(String name, {double volume = 1.0}) {
-    if (!sfxOn) return;
+    if (!sfxOn || !_canPlay) return;
     try {
       FlameAudio.play(name, volume: volume);
     } catch (_) {}

@@ -6,7 +6,19 @@
 enum AdOutcome { completed, cancelled, unavailable }
 
 /// Init del bridge: sempre false sulle build native.
+const bool isYoutubePlayablesBuild = false;
 Future<bool> initPlaygama() async => false;
+Future<bool> initYoutubePlayables() async => false;
+Future<String> youtubeLanguage() async => 'en';
+Future<void> sendYoutubeScore(int value) async {}
+String get playgamaLanguage => 'en';
+Future<String?> loadBridgeSave() async => null;
+Future<bool> saveBridgeData(String value) async => false;
+void sendGameReady() {}
+void listenToPlatform({
+  required void Function(bool paused) onPause,
+  required void Function(bool enabled) onAudio,
+}) {}
 
 /// True se la piattaforma supporta i rewarded (mai su native).
 Future<bool> isRewardedSupported() async => false;

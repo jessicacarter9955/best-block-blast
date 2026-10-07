@@ -1,12 +1,12 @@
 {
-    "name": "chocoblock",
-    "short_name": "chocoblock",
+    "name": "Block Rush",
+    "short_name": "Block Rush",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#0A1755",
+    "theme_color": "#0A1755",
+    "description": "A colorful block-clearing puzzle game.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

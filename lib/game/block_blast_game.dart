@@ -18,6 +18,7 @@ import 'shapes.dart';
 import 'sprite_cache.dart';
 import 'tutorial.dart';
 import 'tween.dart';
+import 'translations.dart';
 
 /// Game states — mirrors the original's GameState variable values
 /// ("Home", "HUD", "Pause", "Revive", "GameOver", "Ranking", "Waiting").
@@ -60,6 +61,9 @@ class BlockBlastGame extends FlameGame {
 
   // === Core state ===
   GameState state = GameState.home;
+  String language = 'en';
+
+  String t(String text) => localizeGameText(language, text);
   final List<List<int?>> grid = List.generate(
       Design.gridSize, (_) => List<int?>.filled(Design.gridSize, null));
 
@@ -159,20 +163,45 @@ class BlockBlastGame extends FlameGame {
     scoreFont = BitmapFont.digits(sprites.get('txtScore'));
     earnedFont = BitmapFont.digitsPlus(sprites.get('txtEarnedScore'));
     comboFont = BitmapFont.comboBig(sprites.get('txtComboNum'));
+    final platformReady = isYoutubePlayablesBuild
+        ? await initYoutubePlayables()
+        : await initPlaygama();
+    if (platformReady) {
+      language = isYoutubePlayablesBuild
+          ? await youtubeLanguage()
+          : playgamaLanguage;
+    }
     await storage.load();
+    if (platformReady) {
+      listenToPlatform(
+        onPause: (paused) {
+          audio.setHostPaused(paused);
+          if (paused) {
+            unawaited(storage.saveNow());
+            pauseEngine();
+          } else {
+            resumeEngine();
+          }
+        },
+        onAudio: audio.setHostAudioEnabled,
+      );
+    }
     await audio.init();
     bestShown = storage.bestScore.toDouble();
     // Playgama Bridge (ads + multi-piattaforma), 1:1 col port web: il
     // provider rewarded si registra SOLO se la piattaforma li supporta
     // (come setHintAdProvider su isRewardedSupported del web); altrimenti
     // resta null e requestHintAd mostra 'Annunci non disponibili'.
-    unawaited(initPlaygama().then((ok) async {
+    unawaited(Future<bool>.value(platformReady).then((ok) async {
       if (ok && await isRewardedSupported()) {
         rewardedHintAd = () async {
-          audio.duckMusicOn();
-          final outcome = await showRewardedAd('hint');
-          audio.duckMusicOff();
-          return outcome == AdOutcome.completed;
+          audio.setAdShowing(true);
+          try {
+            final outcome = await showRewardedAd('hint');
+            return outcome == AdOutcome.completed;
+          } finally {
+            audio.setAdShowing(false);
+          }
         };
       }
     }));
@@ -339,7 +368,7 @@ class BlockBlastGame extends FlameGame {
   Future<void> requestHintAd() async {
     if (hintBusy) return;
     if (rewardedHintAd == null) {
-      hintMessage = 'Annunci non disponibili. Riprova più tardi.';
+      hintMessage = 'Ads unavailable. Try again later.';
       return;
     }
     hintBusy = true;
@@ -348,10 +377,10 @@ class BlockBlastGame extends FlameGame {
       if (completed && hintDialog) {
         unlockHint();
       } else {
-        hintMessage = 'Annuncio non completato: suggerimento non sbloccato.';
+        hintMessage = 'Ad not completed; the hint was not unlocked.';
       }
     } catch (_) {
-      hintMessage = 'Annuncio non disponibile. Riprova più tardi.';
+      hintMessage = 'Ads unavailable. Try again later.';
     } finally {
       hintBusy = false;
     }
@@ -964,12 +993,12 @@ class BlockBlastGame extends FlameGame {
     if (state != GameState.revive || reviveAdBusy) return;
     if (reviveAdReady) {
       reviveAdBusy = true;
-      audio.duckMusicOn();
+      audio.setAdShowing(true);
       var outcome = AdOutcome.unavailable;
       try {
         outcome = await showRewardedAd('revive');
       } finally {
-        audio.duckMusicOff();
+        audio.setAdShowing(false);
         reviveAdBusy = false;
       }
       if (outcome == AdOutcome.completed) reviveNow();
@@ -1106,6 +1135,7 @@ class BlockBlastGame extends FlameGame {
     if ((score - scoreShown).abs() < 0.5) scoreShown = score.toDouble();
     if (previewScene == null && score > storage.bestScore) {
       storage.setBestScore(score);
+      unawaited(sendYoutubeScore(score));
     }
     if (previewScene != 'digits') {
       bestShown += (storage.bestScore - bestShown) * math.min(1, dt * 6);

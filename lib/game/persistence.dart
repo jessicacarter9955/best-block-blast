@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'playgama_ads.dart';
 
 /// Persistence layer — 1:1 equivalent of the original game's LocalStorage
 /// usage. The original stores a single JSON item under the key
@@ -25,6 +26,21 @@ class GameStorage {
   /// Loads the stored data; if missing, applies the original defaults
   /// (SFX=1, Music=1, BestScore=0, Tut=1) and persists them.
   Future<void> load() async {
+    if (isYoutubePlayablesBuild || isPlaygamaPlatform) {
+      final raw = await loadBridgeSave();
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          _apply(jsonDecode(raw) as Map<String, dynamic>);
+          return;
+        } catch (_) {}
+      }
+      sfx = 1;
+      music = 1;
+      bestScore = 0;
+      tut = 1;
+      await _save();
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(storageKey);
     if (raw == null || raw.isEmpty) {
@@ -36,11 +52,7 @@ class GameStorage {
       return;
     }
     try {
-      final data = jsonDecode(raw) as Map<String, dynamic>;
-      sfx = (data['SFX'] as num?)?.toInt() ?? 1;
-      music = (data['Music'] as num?)?.toInt() ?? 1;
-      bestScore = (data['BestScore'] as num?)?.toInt() ?? 0;
-      tut = (data['Tut'] as num?)?.toInt() ?? 1;
+      _apply(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {
       sfx = 1;
       music = 1;
@@ -50,8 +62,22 @@ class GameStorage {
   }
 
   Future<void> _save() async {
+    final encoded = jsonEncode(toJson());
+    if (isYoutubePlayablesBuild || isPlaygamaPlatform) {
+      await saveBridgeData(encoded);
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(storageKey, jsonEncode(toJson()));
+    await prefs.setString(storageKey, encoded);
+  }
+
+  Future<void> saveNow() => _save();
+
+  void _apply(Map<String, dynamic> data) {
+    sfx = (data['SFX'] as num?)?.toInt() ?? 1;
+    music = (data['Music'] as num?)?.toInt() ?? 1;
+    bestScore = (data['BestScore'] as num?)?.toInt() ?? 0;
+    tut = (data['Tut'] as num?)?.toInt() ?? 1;
   }
 
   Map<String, dynamic> toJson() => {
