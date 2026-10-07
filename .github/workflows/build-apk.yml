@@ -1,6 +1,6 @@
 name: Build Release APK
 
-# Builds the Lumen Loom Flutter app for Android.
+# Builds the Block Rush 1:1 Flutter app for Android.
 # EVERY push (any branch) builds a RELEASE APK and uploads it as a GitHub
 # Actions artifact (downloadable from the Actions tab). Tag pushes (v*)
 # also attach the APK to a GitHub Release.
@@ -43,7 +43,7 @@ jobs:
         # correct Gradle wrapper for this Flutter version) using our
         # --org and --project-name for the application ID.
         run: |
-          flutter create --platforms=android --org com.jessicacarter --project-name lumen_loom .
+          flutter create --platforms=android --org com.jessicacarter --project-name chocoblock .
           # Bootstrap also generates the sample counter-app test. It targets
           # MyApp, which this Flame game does not use. Preserve any tracked test.
           if ! git ls-files --error-unmatch test/widget_test.dart >/dev/null 2>&1; then
@@ -51,8 +51,8 @@ jobs:
           fi
 
       - name: Apply custom Android overrides
-        # Overlays the Lumen Loom label, responsive orientation,
-        # vector launcher icon, dark theme styles,
+        # Overlays our custom AndroidManifest.xml (Block Rush label,
+        # portrait lock), dark theme styles, 5-density launcher icons,
         # proguard rules, and patches build.gradle.kts for minSdk=21 +
         # release signing with debug key.
         run: bash setup/apply-android-overrides.sh
@@ -60,7 +60,7 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Test puzzle routes
+      - name: Test fair deals and drag geometry
         run: flutter test
 
       - name: Build release APK
@@ -75,9 +75,9 @@ jobs:
           fi
           mkdir -p artifacts
           cp build/app/outputs/flutter-apk/app-release.apk \
-             "artifacts/lumen-loom-release-${VERSION}.apk"
-          echo "APK_PATH=artifacts/lumen-loom-release-${VERSION}.apk" >> $GITHUB_ENV
-          echo "APK_NAME=lumen-loom-release-${VERSION}.apk" >> $GITHUB_ENV
+             "artifacts/block-rush-release-${VERSION}.apk"
+          echo "APK_PATH=artifacts/block-rush-release-${VERSION}.apk" >> $GITHUB_ENV
+          echo "APK_NAME=block-rush-release-${VERSION}.apk" >> $GITHUB_ENV
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -88,23 +88,23 @@ jobs:
           if-no-files-found: error
 
       # Release "latest" SEMPRE aggiornata: APK scaricabile con un click da
-      # ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/latest
+      # https://github.com/jessicacarter9955/best-block-blast/releases/latest
       # (niente Actions tab, niente artifact scaduto o zip da spacchettare).
-      - name: Also copy as lumen-loom-latest.apk
+      - name: Also copy as block-rush-latest.apk
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
         run: |
-          cp "artifacts/${APK_NAME}" artifacts/lumen-loom-latest.apk
+          cp "artifacts/${APK_NAME}" artifacts/block-rush-latest.apk
 
       - name: Publish APK to the 'latest' Release
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Lumen Loom — latest APK
+          name: Block Rush — APK più recente
           body: |
-            Latest test APK from the default branch.
+            APK release più recente (auto-pubblicato a ogni push).
 
-            **Download:** `lumen-loom-latest.apk` below.
+            **Scarica:** `block-rush-latest.apk` qui sotto 👇
           files: artifacts/*.apk
           draft: false
           prerelease: false

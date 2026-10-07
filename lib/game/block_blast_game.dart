@@ -1,0 +1,1631 @@
+import 'fair_deal.dart';
+import 'dart:math' as math;
+import 'dart:async' show unawaited;
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'dart:ui' show Canvas, Color;
+
+import 'package:flame/components.dart';
+import 'package:flame/events.dart';
+import 'package:flame/game.dart';
+import 'bitmap_font.dart';
+import 'layout_constants.dart';
+import 'persistence.dart';
+import 'audio.dart';
+import 'playgama_ads.dart';
+import 'ranking.dart';
+import 'rendering.dart';
+import 'shapes.dart';
+import 'sprite_cache.dart';
+import 'tutorial.dart';
+import 'tween.dart';
+import 'translations.dart';
+
+/// Game states — mirrors the original's GameState variable values
+/// ("Home", "HUD", "Pause", "Revive", "GameOver", "Ranking", "Waiting").
+enum GameState { home, hud, pause, revive, gameOver, ranking, waiting }
+
+/// The full Block Blast game — 1:1 native Flame port of the original
+/// Construct 3 project, using the original sprites and the original fixed
+/// 1080x1920 design coordinates.
+///
+/// All logic below is a direct transcription of the decompiled event sheets
+/// (see docs/DIFFERENZE.md for the full mapping).
+class BlockBlastGame extends FlameGame {
+  BlockBlastGame()
+      : super(
+          camera: CameraComponent.withFixedResolution(
+            world: World(),
+            width: Design.width,
+            height: Design.height,
+          ),
+        ) {
+    storage = GameStorage();
+    audio = GameAudio(() => storage);
+    tutorial = TutorialController(this);
+  }
+
+  // === Assets & services ===
+  late final SpriteCache sprites;
+  late final GameStorage storage;
+  late final GameAudio audio;
+  late final TutorialController tutorial;
+  late BitmapFont scoreFont;
+  late BitmapFont earnedFont;
+  late BitmapFont comboFont;
+
+  final math.Random rng = math.Random();
+
+  final String? previewScene =
+      kDebugMode ? Uri.base.queryParameters['preview'] : null;
+  double _previewClock = 0;
+
+  // === Core state ===
+  GameState state = GameState.home;
+  String language = 'en';
+
+  String t(String text) => localizeGameText(language, text);
+  final List<List<int?>> grid = List.generate(
+      Design.gridSize, (_) => List<int?>.filled(Design.gridSize, null));
+
+  int score = 0;
+  double scoreShown = 0; // animated counter (original: tween "num" 0.5s)
+  double bestShown = 0;
+  int combo = -1;
+  int comboHeartActive = 0;
+  int noScoreMoves = 0;
+  int putShapeCount = 0;
+
+  // Shape pool (original: ArrayShapesList — 5 placeable shapes, distinct)
+  List<int> shapePool = [];
+
+  // === Tray ===
+  /// 3 slots; null = empty. Slot 1 (middle) hosts tutorial pieces.
+  final List<TraySlot?> tray = [null, null, null];
+
+  // === Drag state ===
+  int dragSlot = -1;
+  double dragDX = 0;
+  Vector2 dragPos = Vector2.zero();
+  bool dragValid = false;
+  List<math.Point<int>> dragTargets = [];
+  final Set<String> dragMarkedLines = {}; // "R3" / "C4"
+  double dragScale = 1; // relative to Design.smallSize
+  double _dragStartScale = 1;
+  double _dragScaleT = 0;
+  double get boardPieceScale => Design.bigSize / Design.smallSize;
+  double dragReturnT = -1; // >= 0 while returning to the tray
+  Vector2 returnFrom = Vector2.zero();
+  double returnScale = 1;
+
+  // === Placement settle animation (cells -> progress 0..1) ===
+  final Map<math.Point<int>, double> settleCells = {};
+
+  // === Effects ===
+  final List<Tween> tweens = [];
+  final List<LineFx> lineFx = [];
+  final List<SquareFx> squares = [];
+  final List<GlowBurst> glowBursts = [];
+  final List<Particle> particles = [];
+  ComboDisplay? comboDisplay;
+  EarnedDisplay? earnedDisplay;
+  NoSpaceBanner? noSpaceBanner;
+
+  // === Screen shake (original: Shaker + DoShake(distance, duration)) ===
+  double shakeValue = 0;
+  double shakeT = 0;
+  double shakeDuration = 0.001;
+  double shakeDistance = 0;
+
+  // === HUD ===
+  bool heartVisible = false;
+  double heartPulse = 0;
+
+  // === Pause popup ===
+  double pausePopupY = -1500; // slides to 960
+  double blackBgOpacity = 0;
+  GameState stateBeforePause = GameState.hud;
+  GameState rankingReturn = GameState.home;
+
+  // === Revive ===
+  int revivePassed = 0;
+  double reviveRadial = 0; // 0..100
+  int reviveText = Design.reviveTime;
+  // Playgama: rewarded disponibile sulla piattaforma e annuncio a schermo
+  // (il countdown del revive resta fermo durante l'annuncio, 1:1 col web).
+  bool reviveAdReady = false;
+  bool reviveAdBusy = false;
+
+  // === Game over ===
+  double goScoreShown = 0;
+
+  // === Ranking ===
+  RankingData? rankingData;
+
+  // === Button press feedback (original: scale 0.95 on touch) ===
+  String? pressedButton;
+
+  // === Tutorial hint loop ===
+  double tutHintT = 0;
+
+  // === Pending scheduled actions ===
+  final List<Scheduled> _pending = [];
+  int _scheduledSerial = 0;
+
+  /// Letterbox color matching the Block Rush background (flat #4E076D,
+  /// sampled from the real game).
+  @override
+  Color backgroundColor() => const Color(0xFF0A1755);
+
+  @override
+  Future<void> onLoad() async {
+    camera.viewfinder.position = Vector2(Design.width / 2, Design.height / 2);
+    sprites = await SpriteCache.load();
+    scoreFont = BitmapFont.digits(sprites.get('txtScore'));
+    earnedFont = BitmapFont.digitsPlus(sprites.get('txtEarnedScore'));
+    comboFont = BitmapFont.comboBig(sprites.get('txtComboNum'));
+    final platformReady = isYoutubePlayablesBuild
+        ? await initYoutubePlayables()
+        : await initPlaygama();
+    if (platformReady) {
+      language = isYoutubePlayablesBuild
+          ? await youtubeLanguage()
+          : playgamaLanguage;
+    }
+    await storage.load();
+    if (platformReady) {
+      listenToPlatform(
+        onPause: (paused) {
+          audio.setHostPaused(paused);
+          if (paused) {
+            unawaited(storage.saveNow());
+            pauseEngine();
+          } else {
+            resumeEngine();
+          }
+        },
+        onAudio: audio.setHostAudioEnabled,
+      );
+    }
+    await audio.init();
+    bestShown = storage.bestScore.toDouble();
+    // Playgama Bridge (ads + multi-piattaforma), 1:1 col port web: il
+    // provider rewarded si registra SOLO se la piattaforma li supporta
+    // (come setHintAdProvider su isRewardedSupported del web); altrimenti
+    // resta null e requestHintAd mostra 'Annunci non disponibili'.
+    unawaited(Future<bool>.value(platformReady).then((ok) async {
+      if (ok && await isRewardedSupported()) {
+        rewardedHintAd = () async {
+          audio.setAdShowing(true);
+          try {
+            final outcome = await showRewardedAd('hint');
+            return outcome == AdOutcome.completed;
+          } finally {
+            audio.setAdShowing(false);
+          }
+        };
+      }
+    }));
+    await world.add(GameCanvas(this));
+    if (['combo', 'revive', 'gameover', 'fair', 'digits']
+        .contains(previewScene)) {
+      state = previewScene == 'revive'
+          ? GameState.revive
+          : previewScene == 'gameover'
+              ? GameState.gameOver
+              : GameState.hud;
+      score = 2480;
+      goScoreShown = 2480;
+      scoreShown = 2480;
+      blackBgOpacity =
+          ['combo', 'fair', 'digits'].contains(previewScene) ? 0 : 0.75;
+      reviveText = 10;
+      for (var y = 4; y < 8; y++) {
+        for (var x = 0; x < 8; x++) {
+          if ((x + y) % 3 != 0) grid[y][x] = (x + y) % 8;
+        }
+      }
+      createShapes();
+      for (final slot in tray) {
+        slot?.popT = 1;
+      }
+      showSolution = previewScene == 'fair';
+      if (previewScene == 'digits') {
+        score = 123456789012345;
+        scoreShown = score.toDouble();
+        bestShown = 987654321098765;
+      }
+    }
+  }
+
+  // =====================================================================
+  //  Scheduling helpers (C3 "Wait" equivalents)
+  // =====================================================================
+
+  int after(double seconds, void Function() action) {
+    final id = ++_scheduledSerial;
+    _pending.add(Scheduled(id, seconds, action));
+    return id;
+  }
+
+  void cancel(int id) {
+    _pending.removeWhere((s) => s.id == id);
+  }
+
+  void addTween(Tween t) => tweens.add(t);
+
+  // =====================================================================
+  //  Game flow
+  // =====================================================================
+
+  void startGame() {
+    for (var y = 0; y < Design.gridSize; y++) {
+      grid[y] = List<int?>.filled(Design.gridSize, null);
+    }
+    for (var i = 0; i < 3; i++) {
+      tray[i] = null;
+    }
+    score = 0;
+    scoreShown = 0;
+    combo = -1;
+    comboHeartActive = 0;
+    noScoreMoves = 0;
+    putShapeCount = 0;
+    heartVisible = false;
+    lineFx.clear();
+    squares.clear();
+    glowBursts.clear();
+    particles.clear();
+    comboDisplay = null;
+    earnedDisplay = null;
+    noSpaceBanner = null;
+    placementPending = false;
+    replayMoves = [];
+    replayBoard = [];
+    solution = [];
+    showSolution = false;
+    hintDialog = false;
+    replayOpen = false;
+    hintMessage = null;
+    settleCells.clear();
+    dragSlot = -1;
+    returningSlot = -1;
+    dragReturnT = -1;
+    dragValid = false;
+    dragTargets.clear();
+    dragMarkedLines.clear();
+    _pending.clear();
+    tweens.clear();
+    pausePopupY = -1500;
+    blackBgOpacity = 0;
+    revivePassed = 0;
+    state = GameState.hud;
+    audio.startMusic();
+    if (storage.tut == 1) {
+      tutorial.startStep(1);
+      _spawnTutorialPiece();
+    } else {
+      createShapes();
+    }
+  }
+
+  void goHome() {
+    state = GameState.home;
+    audio.stopMusic();
+  }
+
+  /// Original "CreateShapes": pool of 5 placeable shapes, 3 distinct picks,
+  /// 3 distinct colors popped from a shuffled 0..7 list.
+  void createShapes({bool revive = false}) {
+    solution = dealFair(grid.expand((r) => r).toList(), [0, 1, 2], rng);
+    final colors = List<int>.generate(8, (i) => i)..shuffle(rng);
+    for (final move in solution) {
+      tray[move.slot] = TraySlot(move.shape, colors[move.slot]);
+      _spawnPopEffects(move.slot);
+    }
+    hintDialog = false;
+    replayOpen = false;
+    hintMessage = null;
+    rememberSolution();
+  }
+
+  List<FairMove> solution = [];
+  bool showSolution = false;
+  bool hintDialog = false;
+  bool placementPending = false;
+
+  List<int?> replayBoard = [];
+  List<FairMove> replayMoves = [];
+  List<int> replayColors = [];
+  bool replayOpen = false;
+  double replayTime = 0;
+  bool hintBusy = false;
+  String? hintMessage;
+  Future<bool> Function()? rewardedHintAd;
+
+  void rememberSolution() {
+    if (solution.isEmpty) return;
+    replayBoard = grid.expand((r) => r).toList();
+    replayMoves = List.of(solution);
+    replayColors = List.generate(3, (i) => tray[i]?.colorIdx ?? 0);
+  }
+
+  void ensureFairContinuation() {
+    final remaining = <int, int>{
+      for (var i = 0; i < 3; i++)
+        if (tray[i] != null && !tray[i]!.placed) i: tray[i]!.shapeIdx
+    };
+    solution = solveFair(grid.expand((r) => r).toList(), remaining) ?? [];
+    rememberSolution();
+  }
+
+  void openHint() {
+    if (placementPending || tutorial.active) return;
+    onDragCancel();
+    hintDialog = true;
+    hintMessage = null;
+  }
+
+  Future<void> requestHintAd() async {
+    if (hintBusy) return;
+    if (rewardedHintAd == null) {
+      hintMessage = 'Ads unavailable. Try again later.';
+      return;
+    }
+    hintBusy = true;
+    try {
+      final completed = await rewardedHintAd!();
+      if (completed && hintDialog) {
+        unlockHint();
+      } else {
+        hintMessage = 'Ad not completed; the hint was not unlocked.';
+      }
+    } catch (_) {
+      hintMessage = 'Ads unavailable. Try again later.';
+    } finally {
+      hintBusy = false;
+    }
+  }
+
+  void unlockHint() {
+    showSolution = true;
+    hintDialog = false;
+    hintMessage = null;
+  }
+
+  void openReplay() {
+    if (replayMoves.isEmpty) return;
+    onDragCancel();
+    hintDialog = false;
+    replayTime = 0;
+    replayOpen = true;
+  }
+
+  /// Original "GetAvailableShapes": 5 distinct shapes that fit the board.
+  void getAvailableShapes() {
+    final all = List<int>.generate(kShapes.length, (i) => i)..shuffle(rng);
+    final pool = <int>[];
+    for (final s in all) {
+      if (pool.length >= 5) break;
+      if (shapeFitsAnywhere(s)) pool.add(s);
+    }
+    shapePool = pool.isEmpty ? [rng.nextInt(kShapes.length)] : pool;
+  }
+
+  /// Original "ShapeCheckPlace": does [shapeIdx] fit anywhere on the board?
+  bool shapeFitsAnywhere(int shapeIdx) {
+    final shape = kShapes[shapeIdx];
+    for (var y = 0; y < Design.gridSize; y++) {
+      for (var x = 0; x < Design.gridSize; x++) {
+        if (_shapeFitsAt(shape, x, y)) return true;
+      }
+    }
+    return false;
+  }
+
+  bool _shapeFitsAt(List<List<int>> shape, int ox, int oy) {
+    for (var r = 0; r < shape.length; r++) {
+      for (var c = 0; c < shape[r].length; c++) {
+        if (shape[r][c] == 0) continue;
+        final gx = ox + c;
+        final gy = oy + r;
+        if (gx < 0 ||
+            gx >= Design.gridSize ||
+            gy < 0 ||
+            gy >= Design.gridSize) {
+          return false;
+        }
+        if (grid[gy][gx] != null) return false;
+      }
+    }
+    return true;
+  }
+
+  /// Original "IsThereSpace": any unplaced tray piece fits anywhere?
+  bool anyRemainingFits() {
+    for (final slot in tray) {
+      if (slot == null || slot.placed) continue;
+      if (shapeFitsAnywhere(slot.shapeIdx)) return true;
+    }
+    return false;
+  }
+
+  void _spawnTutorialPiece() {
+    final colorIdx = rng.nextInt(8);
+    final piece = tutorial.pieceForStep(colorIdx);
+    if (piece == null) return;
+    tray[1] = TraySlot.fromPiece(piece);
+    _spawnPopEffects(1);
+  }
+
+  void _spawnPopEffects(int slotIdx) {
+    final ph = slotCenter(slotIdx);
+    glowBursts.add(GlowBurst(ph.x, ph.y, t: 0));
+    for (var i = 0; i < 10; i++) {
+      final ang = rng.nextDouble() * math.pi * 2;
+      particles.add(Particle(
+        ph.x,
+        ph.y,
+        math.cos(ang) * 220,
+        math.sin(ang) * 220,
+        life: 0.6 + rng.nextDouble() * 0.4,
+      ));
+    }
+  }
+
+  /// 1:1 web: 3 slot FISSI ben distanziati (190 / 540 / 890 a y 1600) —
+  /// i pezzi non si toccano mai; le forme larghe vengono compattate per
+  /// non invadere lo slot vicino (come nel web: clamp a 300px).
+  Vector2 slotCenter(int i) {
+    return Vector2(
+      Design.traySlot0X + i * Design.traySlotStep,
+      Design.trayY,
+    );
+  }
+
+  /// Scala di compattazione del pezzo nel vassoio: le forme larghe (>300px)
+  /// vengono ridotte per non sovrapporsi ai pezzi vicini.
+  double trayScaleFor(TraySlot? slot) {
+    if (slot == null || slot.placed) return 1.0;
+    final shape = kShapes[slot.shapeIdx];
+    final w = shape[0].length * Design.smallSize;
+    final h = shape.length * Design.smallSize;
+    return math.min(1.0, math.min(300 / w, 300 / h));
+  }
+
+  // =====================================================================
+  //  Drag & drop (original "Dragging Blocks" group)
+  // =====================================================================
+
+  /// Finger position in design coordinates (tracked incrementally because
+  /// flame 1.20's DragUpdateEvent.localEndPosition double-counts the delta).
+  final Vector2 finger = Vector2.zero();
+
+  void onDragStart(Vector2 p) {
+    if (placementPending || hintDialog || replayOpen) return;
+    if (state != GameState.hud) return;
+    if (dragSlot >= 0) return;
+    pressedButton = null;
+    finger.setFrom(p);
+    for (var i = 0; i < 3; i++) {
+      final slot = tray[i];
+      if (slot == null || slot.placed) continue;
+      if (dragReturnT >= 0 && i == returningSlot) continue;
+      // Grab when the touch is within 120 design px of any block.
+      final centers = _trayBlockCenters(i);
+      var best = double.infinity;
+      for (final c in centers) {
+        final d = c.distanceTo(p);
+        if (d < best) best = d;
+      }
+      if (best < 120) {
+        dragSlot = i;
+        final ph = slotCenter(i);
+        dragDX = ph.x - p.x;
+        dragPos.setFrom(ph);
+        dragScale = trayScaleFor(slot);
+        _dragStartScale = dragScale;
+        _dragScaleT = 0;
+        dragValid = false;
+        dragTargets.clear();
+        dragMarkedLines.clear();
+        audio.sfxWhoosh();
+        // Original hides the Tut layer while dragging.
+        return;
+      }
+    }
+  }
+
+  int returningSlot = -1;
+
+  List<Vector2> _trayBlockCenters(int slotIdx) {
+    final slot = tray[slotIdx];
+    if (slot == null) return const [];
+    final shape = kShapes[slot.shapeIdx];
+    final ph = slotCenter(slotIdx);
+    final rows = shape.length;
+    final cols = shape[0].length;
+    final cellSize = Design.smallSize * trayScaleFor(slot);
+    final out = <Vector2>[];
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (shape[r][c] == 0) continue;
+        out.add(Vector2(
+          ph.x + (c - (cols - 1) / 2) * cellSize,
+          ph.y + (r - (rows - 1) / 2) * cellSize,
+        ));
+      }
+    }
+    return out;
+  }
+
+  void onDragDelta(Vector2 delta) {
+    if (dragSlot < 0) return;
+    finger.x += delta.x;
+    finger.y += delta.y;
+    // Original: ShapesParent follows the touch, lifted 200px above it.
+    dragPos.setValues(finger.x + dragDX, finger.y - 200);
+    _updateSnap();
+  }
+
+  void _updateSnap() {
+    dragTargets = [];
+    dragMarkedLines.clear();
+    dragValid = false;
+    final slot = dragSlot >= 0 ? tray[dragSlot] : null;
+    if (slot == null) return;
+    final shape = kShapes[slot.shapeIdx];
+    final rows = shape.length;
+    final cols = shape[0].length;
+    final cells = <math.Point<int>>[];
+    final seen = <math.Point<int>>{};
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        if (shape[r][c] == 0) continue;
+        final bx = dragPos.x + (c - (cols - 1) / 2) * Design.bigSize;
+        final by = dragPos.y + (r - (rows - 1) / 2) * Design.cellHeight;
+        final gx = ((bx - Design.gridOriginX) / Design.bigSize).round();
+        final gy = ((by - Design.gridOriginY) / Design.cellHeight).round();
+        if (gx < 0 ||
+            gx >= Design.gridSize ||
+            gy < 0 ||
+            gy >= Design.gridSize) {
+          return;
+        }
+        if (grid[gy][gx] != null) return;
+        final cell = math.Point(gx, gy);
+        if (seen.contains(cell)) return;
+        if (tutorial.active && !tutorial.allowsTarget(gx, gy)) return;
+        seen.add(cell);
+        cells.add(cell);
+      }
+    }
+    dragTargets = cells;
+    dragValid = true;
+    _markCompletedLines(cells);
+  }
+
+  /// Original "CheckRowsCols": during a valid drag, rows/columns that would
+  /// be completed (counting the preview cells as filled) get marked, and the
+  /// blocks in them are recolored to the dragged piece's color.
+  void _markCompletedLines(List<math.Point<int>> targets) {
+    final targetSet = targets.toSet();
+    for (final t in targets) {
+      // Row check
+      var rowFull = true;
+      for (var x = 0; x < Design.gridSize; x++) {
+        final cell = math.Point(x, t.y);
+        if (grid[t.y][x] == null && !targetSet.contains(cell)) {
+          rowFull = false;
+          break;
+        }
+      }
+      if (rowFull) dragMarkedLines.add('R${t.y}');
+      // Column check
+      var colFull = true;
+      for (var y = 0; y < Design.gridSize; y++) {
+        final cell = math.Point(t.x, y);
+        if (grid[y][t.x] == null && !targetSet.contains(cell)) {
+          colFull = false;
+          break;
+        }
+      }
+      if (colFull) dragMarkedLines.add('C${t.x}');
+    }
+  }
+
+  void onDragEnd() {
+    if (dragSlot < 0) return;
+    if (state != GameState.hud) {
+      onDragCancel();
+      return;
+    }
+    final slot = tray[dragSlot];
+    if (slot == null) {
+      dragSlot = -1;
+      return;
+    }
+    if (dragValid && dragTargets.isNotEmpty) {
+      _placeDraggedPiece(slot);
+    } else {
+      _returnPiece();
+    }
+    dragValid = false;
+    dragMarkedLines.clear();
+  }
+
+  void onDragCancel() {
+    if (dragSlot < 0) return;
+    _returnPiece();
+    dragValid = false;
+    dragTargets.clear();
+    dragMarkedLines.clear();
+  }
+
+  void _placeDraggedPiece(TraySlot slot) {
+    placementPending = true;
+    showSolution = false;
+    solution = [];
+    final colorIdx = slot.colorIdx;
+    final blockCount = dragTargets.length;
+    for (final cell in dragTargets) {
+      grid[cell.y][cell.x] = colorIdx;
+      settleCells[cell] = 0;
+    }
+    slot.placed = true;
+    putShapeCount++;
+    dragSlot = -1;
+
+    // Score: +blocks, animated count-up (original AddScore, 0.5s tween).
+    score += blockCount;
+    audio.sfxPut();
+
+    final piecePos = dragPos.clone();
+    final markedLines = Set<String>.of(dragMarkedLines);
+
+    after(0.1, () {
+      if (markedLines.isNotEmpty) {
+        _runLineClears(markedLines, colorIdx, piecePos);
+      } else {
+        _onNoScoreMove();
+      }
+      after(0, _advanceFlow);
+    });
+  }
+
+  void _returnPiece() {
+    final slotIdx = dragSlot;
+    dragSlot = -1;
+    if (slotIdx < 0) return;
+    returningSlot = slotIdx;
+    dragReturnT = 0;
+    returnFrom.setFrom(dragPos);
+    returnScale = dragScale;
+    audio.sfxReturn();
+  }
+
+  // =====================================================================
+  //  Line clearing / combo / earned score (original groups "Lines",
+  //  "Combo", "Combo Heart", "Score", "Best Score")
+  // =====================================================================
+
+  void _runLineClears(Set<String> markedLines, int colorIdx, Vector2 piecePos) {
+    noScoreMoves = 0;
+    // Original: AddCombo increments Combo first (-1 -> 0 on the first clear);
+    // the EarnedScore expression then reads the INCREMENTED value and adds +1.
+    combo += 1;
+    final comboAfter = combo;
+    comboHeartActive = 1;
+    if (comboAfter > 1) heartVisible = true;
+
+    final lines = markedLines.length;
+    // Verified against the live game (63 / 186 / 550 tutorial sequence):
+    // step1 Combo=0 -> 60, step2 Combo=1 -> 120, step3 Combo=2 -> 360.
+    final lineMult = lines >= 2 ? lines - 1 : 1;
+    final earnedScore = (comboAfter + 1) * 10 * lines * lineMult;
+    audio.sfxScore(comboAfter);
+
+    // Destroy blocks + spawn effects for each marked line (ClearLine).
+    for (final line in markedLines) {
+      _clearLine(line, colorIdx);
+    }
+
+    if (comboAfter == 0) {
+      // First clear: the original's "Combo < 1" branch fires the earned-score
+      // popup immediately (no combo glow yet).
+      showEarnedScore(piecePos.x, piecePos.y, earnedScore, lines);
+    } else {
+      // Combo display (glow from the 2nd consecutive clear, counter + shake
+      // from the 3rd), then the earned popup after 0.9s + 0.5s shrink.
+      comboDisplay =
+          ComboDisplay(comboAfter, lines, piecePos: piecePos.clone());
+      if (comboAfter > 1) {
+        doShake(5, 0.2);
+      }
+      after(1.4, () {
+        showEarnedScore(piecePos.x, piecePos.y, earnedScore, lines);
+      });
+    }
+  }
+
+  void _clearLine(String line, int colorIdx) {
+    final color = _blockColor(colorIdx);
+    if (line.startsWith('R')) {
+      final y = int.parse(line.substring(1));
+      for (var x = 0; x < Design.gridSize; x++) {
+        grid[y][x] = null;
+      }
+      lineFx.add(LineFx(
+        horizontal: true,
+        pos: Design.gridOriginY + y * Design.cellHeight,
+        color: color,
+      ));
+      // Original: the squares spawn after Wait(0.2).
+      after(0.2, () {
+        _spawnSquareEffects(
+          Design.boardX,
+          Design.gridOriginY + y * Design.cellHeight,
+          horizontal: true,
+          color: color,
+        );
+      });
+    } else {
+      final x = int.parse(line.substring(1));
+      for (var y = 0; y < Design.gridSize; y++) {
+        grid[y][x] = null;
+      }
+      lineFx.add(LineFx(
+        horizontal: false,
+        pos: Design.gridOriginX + x * Design.bigSize,
+        color: color,
+      ));
+      // Original: the squares spawn after Wait(0.2).
+      after(0.2, () {
+        _spawnSquareEffects(
+          Design.gridOriginX + x * Design.bigSize,
+          Design.boardY,
+          horizontal: false,
+          color: color,
+        );
+      });
+    }
+  }
+
+  void _spawnSquareEffects(double x, double y,
+      {required bool horizontal, required RgbColor color}) {
+    for (var i = 0; i < 24; i++) {
+      final along = (rng.nextDouble() - 0.5) * 820;
+      final side = i.isEven ? -1.0 : 1.0;
+      final speed = 140 + rng.nextDouble() * 240;
+      final jewelColor = RgbColor.fromColor([0, 1, 2, 5, 7, 3][i % 6]);
+      squares.add(SquareFx(
+          horizontal ? x + along : x,
+          horizontal ? y : y + along,
+          horizontal ? side * speed : (rng.nextDouble() - .5) * 180,
+          horizontal ? -60 - rng.nextDouble() * 200 : side * speed,
+          34 + rng.nextDouble() * 38,
+          jewelColor,
+          1));
+    }
+    if (squares.length > 144) squares.removeRange(0, squares.length - 144);
+  }
+
+  void _onNoScoreMove() {
+    // Original: 3 consecutive non-clearing moves with the combo heart active
+    // resets the combo and hides the heart.
+    if (comboHeartActive != 1) return;
+    noScoreMoves++;
+    if (noScoreMoves >= 3) {
+      noScoreMoves = 0;
+      combo = -1;
+      comboHeartActive = 0;
+      heartVisible = false;
+    }
+  }
+
+  /// Original "ShowEarnedScore": adds the score, shows "+N", glow, and the
+  /// Cheerful praise sprite (frame = lines) for multi-line clears.
+  void showEarnedScore(double x, double y, int value, int lines) {
+    score += value;
+    earnedDisplay = EarnedDisplay(x, y, value, lines);
+    if (lines >= 2) {
+      audio.sfxCheerful(lines);
+    }
+  }
+
+  void doShake(double distance, double duration) {
+    shakeDistance = distance;
+    shakeDuration = duration;
+    shakeT = 0;
+    shakeValue = distance;
+  }
+
+  // =====================================================================
+  //  Flow after each placement (original post-Put sequence)
+  // =====================================================================
+
+  void _advanceFlow() {
+    placementPending = false;
+    if (tutorial.active) {
+      switch (tutorial.tutNum) {
+        case 1:
+          after(1.5, () {
+            tutorial.startStep(2);
+            _spawnTutorialPiece();
+          });
+          break;
+        case 2:
+          after(2.5, () {
+            tutorial.startStep(3);
+            _spawnTutorialPiece();
+          });
+          break;
+        case 3:
+          tutorial.tutNum = 0;
+          putShapeCount = 0;
+          storage.setTutCompleted();
+          after(1.0, () => createShapes());
+          break;
+      }
+      return;
+    }
+    if (putShapeCount >= 3) {
+      putShapeCount = 0;
+      final delay = lineFx.isNotEmpty ? 0.5 : 0.0;
+      after(delay, () => createShapes());
+    } else {
+      ensureFairContinuation();
+      if (!anyRemainingFits()) gameOverStart();
+    }
+  }
+
+  // =====================================================================
+  //  Game over / revive (original groups "Game Over" + "Revive")
+  // =====================================================================
+
+  void gameOverStart() {
+    if (state == GameState.gameOver || state == GameState.waiting) return;
+    state = GameState.waiting;
+    audio.stopMusic();
+    audio.sfxNoSpace();
+    noSpaceBanner = NoSpaceBanner();
+    after(1.0, _showGameOverLayer);
+  }
+
+  void reviveOpen() {
+    state = GameState.revive;
+    revivePassed = 0;
+    reviveText = Design.reviveTime;
+    reviveRadial = 0;
+    reviveAdBusy = false;
+    _refreshReviveAdReady();
+    addTween(Tween(
+      from: blackBgOpacity,
+      to: 0.80,
+      duration: 0.5,
+      onUpdate: (v) => blackBgOpacity = v,
+    ));
+    after(1.0, _reviveTick);
+  }
+
+  /// Aggiorna la disponibilità dei rewarded per il revive: check immediato +
+  /// re-check dopo l'init ritardata del bridge (1:1 col web, 1200ms).
+  void _refreshReviveAdReady() {
+    Future<void> check() async {
+      if (await isRewardedAdReady() && state == GameState.revive) {
+        reviveAdReady = true;
+      }
+    }
+
+    check();
+    Future.delayed(const Duration(milliseconds: 1200), check);
+  }
+
+  void _reviveTick() {
+    if (state != GameState.revive) return;
+    if (reviveAdBusy) {
+      // Rewarded a schermo: countdown in pausa (1:1 col port web).
+      after(1.0, _reviveTick);
+      return;
+    }
+    if (revivePassed >= Design.reviveTime) {
+      _showGameOverLayer();
+      return;
+    }
+    revivePassed++;
+    reviveText = Design.reviveTime - revivePassed;
+    audio.sfxBeep();
+    final target = (100 / Design.reviveTime) * revivePassed;
+    addTween(Tween(
+      from: reviveRadial,
+      to: target,
+      duration: 0.5,
+      ease: Ease.easeOut,
+      onUpdate: (v) => reviveRadial = v,
+    ));
+    after(1.0, _reviveTick);
+  }
+
+  void _showGameOverLayer() {
+    state = GameState.gameOver;
+    audio.sfxLose();
+    goScoreShown = 0;
+    addTween(Tween(
+      from: 0,
+      to: score.toDouble(),
+      duration: 0.8,
+      ease: Ease.easeOut,
+      onUpdate: (v) => goScoreShown = v,
+    ));
+  }
+
+  /// Original "ReviveGame": destroys the tray pieces (the original destroys
+  /// the loose Block instances overlapping the PlaceHolders), resets the
+  /// tray and deals a new set.
+  void reviveNow() {
+    if (state != GameState.revive) return;
+    noSpaceBanner = null;
+    audio.sfxRevive();
+    addTween(Tween(
+      from: blackBgOpacity,
+      to: 0,
+      duration: 0.5,
+      onUpdate: (v) => blackBgOpacity = v,
+    ));
+    for (var i = 0; i < 3; i++) {
+      tray[i] = null;
+    }
+    for (var y = 2; y < 5; y++) {
+      for (var x = 2; x < 5; x++) {
+        grid[y][x] = null;
+      }
+    }
+    putShapeCount = 0;
+    createShapes(revive: true);
+    state = GameState.hud;
+    audio.startMusic();
+  }
+
+  /// FREE CONTINUE / WATCH AD & CONTINUE: se la piattaforma ha i rewarded il
+  /// revive si sblocca con un annuncio, altrimenti è gratis (fallback 1:1 col
+  /// port web). Se l'annuncio viene chiuso prima della fine si resta nel
+  /// pannello e il countdown riprende.
+  Future<void> _continueWithAd() async {
+    if (state != GameState.revive || reviveAdBusy) return;
+    if (reviveAdReady) {
+      reviveAdBusy = true;
+      audio.setAdShowing(true);
+      var outcome = AdOutcome.unavailable;
+      try {
+        outcome = await showRewardedAd('revive');
+      } finally {
+        audio.setAdShowing(false);
+        reviveAdBusy = false;
+      }
+      if (outcome == AdOutcome.completed) reviveNow();
+      return;
+    }
+    reviveNow();
+  }
+
+  /// PLAY AGAIN dal game over: interstitial tra le run (il delay minimo di
+  /// 90s tra interstitial è gestito dall'SDK via playgama-bridge-config).
+  Future<void> _playAgainWithAd() async {
+    try {
+      await showInterstitialAd('game_over');
+    } catch (_) {/* mai bloccare il restart */}
+    startGame();
+  }
+
+  // =====================================================================
+  //  Pause (original "Pause" group)
+  // =====================================================================
+
+  void pauseOpen() {
+    if (state != GameState.hud) return;
+    onDragCancel();
+    stateBeforePause = GameState.hud;
+    state = GameState.pause;
+    addTween(Tween(
+      from: pausePopupY,
+      to: Design.height / 2,
+      duration: 0.5,
+      ease: Ease.easeOut,
+      onUpdate: (v) => pausePopupY = v,
+    ));
+    addTween(Tween(
+      from: blackBgOpacity,
+      to: 0.70,
+      duration: 0.5,
+      onUpdate: (v) => blackBgOpacity = v,
+    ));
+  }
+
+  void pauseClose() {
+    if (state != GameState.pause && state != GameState.ranking) return;
+    state = GameState.hud;
+    addTween(Tween(
+      from: pausePopupY,
+      to: -1500,
+      duration: 0.5,
+      ease: Ease.easeIn,
+      onUpdate: (v) => pausePopupY = v,
+    ));
+    addTween(Tween(
+      from: blackBgOpacity,
+      to: 0,
+      duration: 0.5,
+      onUpdate: (v) => blackBgOpacity = v,
+    ));
+  }
+
+  // =====================================================================
+  //  Ranking (original GeneralSheet "Ranking" group)
+  // =====================================================================
+
+  Future<void> rankingOpen() async {
+    rankingReturn = state;
+    rankingData = await RankingData.load(storage.bestScore);
+  }
+
+  void rankingClose() {
+    if (rankingReturn == GameState.home) {
+      state = GameState.home;
+    } else {
+      state = GameState.pause;
+    }
+    rankingData = null;
+  }
+
+  // =====================================================================
+  //  Update loop
+  // =====================================================================
+
+  @override
+  void update(double dt) {
+    if (replayOpen) {
+      replayTime += dt.clamp(0.0, 0.1);
+      return;
+    }
+    if (hintDialog) return;
+    if (['combo', 'revive', 'gameover'].contains(previewScene)) {
+      _previewClock += dt;
+      if (previewScene == 'combo') {
+        final t = _previewClock % 2.3;
+        comboDisplay = ComboDisplay(4, 3, piecePos: Vector2(540, 1000))..t = t;
+        earnedDisplay = EarnedDisplay(540, 1160, 480, 3)..t = t;
+        if (squares.isEmpty || t < dt) {
+          squares.clear();
+          _spawnSquareEffects(540, 1060,
+              horizontal: true, color: RgbColor.fromColor(1));
+        }
+        lineFx.clear();
+        lineFx.add(
+            LineFx(horizontal: true, pos: 1060, color: RgbColor.fromColor(1))
+              ..t = t);
+        for (final g in squares) {
+          g.t = t;
+        }
+      }
+      super.update(dt);
+      return;
+    }
+
+    super.update(dt);
+    if (dt <= 0 || dt > 0.5) return;
+
+    // Scheduled actions.
+    final due = <Scheduled>[];
+    _pending.removeWhere((s) {
+      s.delay -= dt;
+      if (s.delay <= 0) {
+        due.add(s);
+        return true;
+      }
+      return false;
+    });
+    for (final s in due) {
+      s.action();
+    }
+
+    // Tweens.
+    tweens.removeWhere((t) => t.update(dt));
+
+    // Score counters chase their targets (smooth count-up).
+    scoreShown += (score - scoreShown) * math.min(1, dt * 6);
+    if ((score - scoreShown).abs() < 0.5) scoreShown = score.toDouble();
+    if (previewScene == null && score > storage.bestScore) {
+      storage.setBestScore(score);
+      unawaited(sendYoutubeScore(score));
+    }
+    if (previewScene != 'digits') {
+      bestShown += (storage.bestScore - bestShown) * math.min(1, dt * 6);
+    }
+
+    // Tray piece pop-ins (0.3s).
+    for (final slot in tray) {
+      if (slot != null && slot.popT < 1) {
+        slot.popT = math.min(1, slot.popT + dt / 0.3);
+      }
+    }
+
+    // Heart pulse (original: Sine behavior on Heart).
+    if (heartVisible) {
+      heartPulse += dt;
+    }
+
+    // Effects.
+    for (final fx in lineFx) {
+      fx.t += dt;
+    }
+    lineFx.removeWhere((fx) => fx.t > 1.0);
+    for (final s in squares) {
+      s.t += dt;
+    }
+    // Original: the 1s opacity tween carries the destroy flag, so the
+    // particle is removed at 1s even though the movement tween is longer.
+    squares.removeWhere((s) => s.t >= 1.0);
+    for (final g in glowBursts) {
+      g.t += dt;
+    }
+    glowBursts.removeWhere((g) => g.t > 0.4);
+    for (final p in particles) {
+      p.t += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+    particles.removeWhere((p) => p.t >= p.life);
+
+    // Combo display lifecycle.
+    final cd = comboDisplay;
+    if (cd != null) {
+      cd.t += dt;
+      if (cd.t > 2.4) comboDisplay = null;
+    }
+    final ed = earnedDisplay;
+    if (ed != null) {
+      ed.t += dt;
+      if (ed.t > 2.3) earnedDisplay = null;
+    }
+    final ns = noSpaceBanner;
+    if (ns != null) {
+      ns.t += dt;
+    }
+
+    // Grow from the actual tray size to one board cell, without overshoot.
+    if (dragSlot >= 0) {
+      _dragScaleT = math.min(1.0, _dragScaleT + dt / 0.14);
+      final eased = 1 - (1 - _dragScaleT) * (1 - _dragScaleT);
+      dragScale = _dragStartScale + (boardPieceScale - _dragStartScale) * eased;
+    }
+
+    // Piece return animation (0.3s).
+    if (dragReturnT >= 0) {
+      dragReturnT += dt / 0.3;
+      if (dragReturnT >= 1) {
+        dragReturnT = -1;
+        returningSlot = -1;
+      }
+    }
+
+    // Settle animation (0.1s).
+    final settledCells = <math.Point<int>>[];
+    settleCells.forEach((cell, t) {
+      if (t + dt / 0.1 >= 1) settledCells.add(cell);
+    });
+    for (final cell in settledCells) {
+      settleCells.remove(cell);
+    }
+    if (settleCells.isNotEmpty) {
+      final keys = settleCells.keys.toList();
+      for (final cell in keys) {
+        final t = settleCells[cell]!;
+        settleCells[cell] = (t + dt / 0.1).clamp(0.0, 1.0);
+      }
+    }
+
+    // Tutorial hint loop timing.
+    if (tutorial.active && state == GameState.hud && dragSlot < 0) {
+      tutHintT += dt;
+    }
+
+    // Screen shake decay.
+    if (shakeValue > 0) {
+      shakeT += dt;
+      if (shakeT >= shakeDuration) {
+        shakeValue = 0;
+      } else {
+        shakeValue = shakeDistance * (1 - shakeT / shakeDuration);
+      }
+    }
+  }
+
+  // =====================================================================
+  //  Input from the canvas component
+  // =====================================================================
+
+  void handleTapDown(Vector2 p) {
+    pressedButton = _buttonAt(p);
+  }
+
+  void handleTapUp(Vector2 p) {
+    final btn = _buttonAt(p);
+    final pressed = pressedButton;
+    pressedButton = null;
+    if (btn == null || btn != pressed) return;
+    switch (btn) {
+      case 'home_play':
+        startGame();
+        break;
+      case 'home_ranking':
+        rankingOpen();
+        break;
+      case 'home_music':
+        storage.setMusic(!storage.musicOn);
+        if (!storage.musicOn) audio.stopMusic();
+        break;
+      case 'home_sfx':
+        storage.setSfx(!storage.sfxOn);
+        break;
+      case 'hud_solution':
+        openHint();
+        break;
+      case 'hint_close':
+        if (!hintBusy) hintDialog = false;
+        break;
+      case 'hint_ad':
+        requestHintAd();
+        break;
+      case 'hint_demo':
+        if (kDebugMode) unlockHint();
+        break;
+      case 'replay_open':
+        openReplay();
+        break;
+      case 'replay_close':
+        replayOpen = false;
+        break;
+      case 'replay_restart':
+        replayTime = 0;
+        break;
+      case 'hud_pause':
+        pauseOpen();
+        break;
+      case 'pause_close':
+      case 'pause_resume':
+        pauseClose();
+        break;
+      case 'pause_music':
+        storage.setMusic(!storage.musicOn);
+        break;
+      case 'pause_sfx':
+        storage.setSfx(!storage.sfxOn);
+        break;
+      case 'pause_home':
+        goHome();
+        break;
+      case 'pause_reset':
+        startGame();
+        break;
+      case 'pause_ranking':
+        rankingOpen();
+        break;
+      case 'revive_btn':
+        _continueWithAd();
+        break;
+      case 'revive_skip':
+        _showGameOverLayer();
+        break;
+      case 'go_home':
+        goHome();
+        break;
+      case 'go_reset':
+        _playAgainWithAd();
+        break;
+      case 'ranking_close':
+        rankingClose();
+        break;
+    }
+  }
+
+  /// Hit-testing for every interactive button, per state — rects from the
+  /// original layout instances (center-anchored).
+  String? _buttonAt(Vector2 p) {
+    if (replayOpen) {
+      if (_contains(p, 902, 350, 88, 88)) return 'replay_close';
+      if (_contains(p, 540, 1580, 640, 100)) return 'replay_restart';
+      return null;
+    }
+    if (hintDialog) {
+      if (hintBusy) return null;
+      if (_contains(p, 902, 550, 88, 88)) return 'hint_close';
+      if (solution.isEmpty && _contains(p, 540, 1120, 712, 130)) {
+        return 'replay_open';
+      }
+      if (solution.isNotEmpty && _contains(p, 540, 1120, 712, 130)) {
+        return 'hint_ad';
+      }
+      if (kDebugMode &&
+          solution.isNotEmpty &&
+          _contains(p, 540, 1390, 600, 90)) {
+        return 'hint_demo';
+      }
+      return null;
+    }
+    switch (state) {
+      case GameState.home:
+        if (rankingData != null) {
+          if (_contains(p, Design.lbCloseX, Design.lbCloseY, Design.lbCloseSize,
+              Design.lbCloseSize)) {
+            return 'ranking_close';
+          }
+          return null;
+        }
+        if (_contains(p, Design.btnPlayX, Design.btnPlayY, Design.btnPlayW,
+            Design.btnPlayH)) {
+          return 'home_play';
+        }
+        if (_contains(
+            p, 539, Design.homeBtnY, Design.homeBtnSize, Design.homeBtnSize)) {
+          return 'home_ranking';
+        }
+        if (_contains(p, Design.homeMusicX, Design.homeBtnY, Design.homeBtnSize,
+            Design.homeBtnSize)) {
+          return 'home_music';
+        }
+        if (_contains(p, Design.homeSfxX, Design.homeBtnY, Design.homeBtnSize,
+            Design.homeBtnSize)) {
+          return 'home_sfx';
+        }
+        return null;
+      case GameState.hud:
+        if (!tutorial.active && _contains(p, 805, Design.pauseBtnY, 120, 120)) {
+          return 'hud_solution';
+        }
+        if (_contains(p, Design.pauseBtnX, Design.pauseBtnY,
+            Design.pauseBtnSize, Design.pauseBtnSize)) {
+          return 'hud_pause';
+        }
+        return null;
+      case GameState.pause:
+        if (rankingData != null) {
+          if (_contains(p, Design.lbCloseX, Design.lbCloseY, Design.lbCloseSize,
+              Design.lbCloseSize)) {
+            return 'ranking_close';
+          }
+          return null;
+        }
+        // Controls follow the sliding panel instead of accepting taps at
+        // their final position while the panel is still moving.
+        p = Vector2(p.x, p.y - (pausePopupY - Design.pausePopupY));
+        if (_contains(p, Design.btnResumeX, Design.btnResumeY,
+            Design.btnResumeW, Design.btnResumeH)) {
+          return 'pause_resume';
+        }
+        if (_contains(p, Design.btnCloseX, Design.btnCloseY,
+            Design.btnCloseSize, Design.btnCloseSize)) {
+          return 'pause_close';
+        }
+        if (_contains(p, 540, Design.btnSfxY, 712, 118)) {
+          return 'pause_sfx';
+        }
+        if (_contains(p, 540, Design.btnMusicY, 712, 118)) {
+          return 'pause_music';
+        }
+        if (_contains(p, Design.btnHomeX, Design.btnHomeY, Design.btnHomeW,
+            Design.btnHomeH)) {
+          return 'pause_home';
+        }
+        if (_contains(p, Design.btnResetX, Design.btnResetY, Design.btnResetW,
+            Design.btnResetH)) {
+          return 'pause_reset';
+        }
+        if (_contains(p, Design.btnShowRankingX, Design.btnShowRankingY,
+            Design.btnShowRankingW, Design.btnShowRankingH)) {
+          return 'pause_ranking';
+        }
+        return null;
+      case GameState.revive:
+        if (replayMoves.isNotEmpty && _contains(p, 540, 1585, 650, 92)) {
+          return 'replay_open';
+        }
+        if (_contains(p, 540, 1250, 712, 148)) return 'revive_btn';
+        if (_contains(p, 540, 1440, 500, 90)) return 'revive_skip';
+        return null;
+      case GameState.gameOver:
+        if (replayMoves.isNotEmpty && _contains(p, 540, 1205, 650, 80)) {
+          return 'replay_open';
+        }
+        if (_contains(p, 540, 1330, 712, 148)) return 'go_reset';
+        if (_contains(p, 540, 1490, 400, 96)) return 'go_home';
+        return null;
+      case GameState.ranking:
+        if (_contains(p, Design.lbCloseX, Design.lbCloseY, Design.lbCloseSize,
+            Design.lbCloseSize)) {
+          return 'ranking_close';
+        }
+        return null;
+      default:
+        return null;
+    }
+  }
+
+  bool _contains(Vector2 p, double cx, double cy, double w, double h) {
+    return p.x >= cx - w / 2 &&
+        p.x <= cx + w / 2 &&
+        p.y >= cy - h / 2 &&
+        p.y <= cy + h / 2;
+  }
+
+  RgbColor _blockColor(int colorIdx) => RgbColor.fromColor(colorIdx);
+}
+
+// =====================================================================
+//  Data classes
+// =====================================================================
+
+class TraySlot {
+  TraySlot(this.shapeIdx, this.colorIdx);
+
+  TraySlot.fromPiece(Piece piece)
+      : shapeIdx = kShapes.indexOf(piece.shape),
+        colorIdx = piece.colorIdx;
+
+  int shapeIdx;
+  int colorIdx;
+  bool placed = false;
+  double popT = 0; // pop-in animation 0..1
+}
+
+class Scheduled {
+  Scheduled(this.id, this.delay, this.action);
+  final int id;
+  double delay;
+  final void Function() action;
+}
+
+class LineFx {
+  LineFx({required this.horizontal, required this.pos, required this.color});
+  final bool horizontal;
+  final double pos; // y for horizontal lines, x for vertical
+  final RgbColor color;
+  double t = 0;
+}
+
+class SquareFx {
+  /// 1:1 with the original CreateSquareEffect:
+  /// - spawns at (x, y), tween-position to (x + vx, y + vy) over [dur]
+  ///   with LINEAR easing (vx/vy are the full ±220 / 0 displacements);
+  /// - opacity tween 100 -> 0 over 1s with destroy-on-finish, so the
+  ///   particle is gone at t = 1 regardless of the longer movement tween;
+  /// - size stays fixed (the original has no size tween).
+  SquareFx(this.x, this.y, this.vx, this.vy, this.size, this.color, this.dur);
+  final double x;
+  final double y;
+  final double vx;
+  final double vy;
+  final double size;
+  final RgbColor color;
+  final double dur;
+  double t = 0; // age in seconds; destroyed at 1.0
+}
+
+class GlowBurst {
+  GlowBurst(this.x, this.y, {this.t = 0});
+  final double x;
+  final double y;
+  double t;
+}
+
+class Particle {
+  Particle(this.x, this.y, this.vx, this.vy, {required this.life});
+  double x;
+  double y;
+  final double vx;
+  final double vy;
+  final double life;
+  double t = 0;
+}
+
+class ComboDisplay {
+  ComboDisplay(this.combo, this.lines, {required this.piecePos});
+  final int combo;
+  final int lines;
+  final Vector2 piecePos;
+  double t = 0;
+}
+
+class EarnedDisplay {
+  EarnedDisplay(this.x, this.y, this.value, this.lines);
+  final double x;
+  final double y;
+  final int value;
+  final int lines;
+  double t = 0;
+}
+
+class NoSpaceBanner {
+  double t = 0;
+}
+
+class RgbColor {
+  RgbColor(this.r, this.g, this.b);
+  factory RgbColor.fromColor(int blockFrameIdx) {
+    // Block Rush palette (sampled from the real game screenshot), same
+    // frame order as the Block sprites: viola, ciano, verde, blu, giallo,
+    // arancio, rosso, magenta.
+    const values = [
+      (136, 72, 224),
+      (0, 192, 192),
+      (1, 197, 1),
+      (0, 144, 248),
+      (248, 208, 0),
+      (200, 125, 0),
+      (196, 10, 10),
+      (196, 10, 196),
+    ];
+    final v = values[blockFrameIdx.clamp(0, 7)];
+    return RgbColor(v.$1, v.$2, v.$3);
+  }
+  final int r;
+  final int g;
+  final int b;
+}
+
+/// Full-screen input & render surface living in the world (design coords).
+class GameCanvas extends Component with TapCallbacks, DragCallbacks {
+  GameCanvas(this.game);
+
+  final BlockBlastGame game;
+
+  @override
+  bool containsLocalPoint(Vector2 point) => true;
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    super.onTapDown(event);
+    game.handleTapDown(event.localPosition);
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    super.onTapUp(event);
+    game.handleTapUp(event.localPosition);
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    super.onTapCancel(event);
+    game.pressedButton = null;
+  }
+
+  @override
+  void onDragStart(DragStartEvent event) {
+    super.onDragStart(event);
+    game.onDragStart(event.localPosition);
+  }
+
+  @override
+  void onDragUpdate(DragUpdateEvent event) {
+    super.onDragUpdate(event);
+    // flame 1.20 bug: localEndPosition = position + delta (double-counted);
+    // localDelta is correct — apply it incrementally.
+    game.onDragDelta(event.localDelta);
+  }
+
+  @override
+  void onDragEnd(DragEndEvent event) {
+    super.onDragEnd(event);
+    game.onDragEnd();
+  }
+
+  @override
+  void onDragCancel(DragCancelEvent event) {
+    super.onDragCancel(event);
+    game.onDragCancel();
+  }
+
+  @override
+  void render(Canvas canvas) {
+    game.renderWorld(canvas);
+  }
+}
