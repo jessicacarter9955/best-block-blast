@@ -69,7 +69,6 @@ extension GameRendering on BlockBlastGame {
       canvas.save();
       canvas.translate(landscapeOffsetX, 0);
       canvas.scale(0.5625);
-      _drawBlackBg(canvas);
       _drawNoSpaceBanner(canvas);
       _drawReviveOverlay(canvas);
       _drawGameOverOverlay(canvas);
