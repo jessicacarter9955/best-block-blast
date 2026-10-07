@@ -61,6 +61,28 @@ void main() {
     expect(5 * Design.smallSize * game.dragScale, closeTo(300, 0.000001));
   });
 
+  test('landscape drag coordinates snap to the rendered board cells', () {
+    game.isLandscape = true;
+    addPiece(1, 0);
+    final trayCenter = game.slotCenter(1);
+    game.onDragStart(trayCenter);
+    expect(game.dragSlot, 1);
+
+    const column = 4;
+    const row = 3;
+    final cellX = game.landscapeBoardX +
+        (Design.gridOriginX + column * Design.bigSize) *
+            BlockBlastGame.landscapeBoardScale;
+    final cellY = game.landscapeBoardY +
+        (Design.gridOriginY + row * Design.cellHeight) *
+            BlockBlastGame.landscapeBoardScale;
+    game.onDragDelta(Vector2(cellX - game.finger.x,
+        cellY + 120 - game.finger.y));
+
+    expect(game.dragValid, isTrue);
+    expect(game.dragTargets, contains(math.Point(column, row)));
+  });
+
   test('early release captures its current scale for the return animation', () {
     addPiece(0, 23);
     addPiece(2, 0);

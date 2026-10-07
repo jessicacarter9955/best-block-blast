@@ -41,8 +41,8 @@ extension GameRendering on BlockBlastGame {
     // line-clear effects on the left, with the tray and controls in a side
     // rail. Only the board's coordinate transform changes with orientation.
     canvas.save();
-    canvas.translate(landscapeBoardX, landscapeBoardY);
-    canvas.scale(landscapeBoardScale);
+    canvas.translate(BlockBlastGame.landscapeBoardX, BlockBlastGame.landscapeBoardY);
+    canvas.scale(BlockBlastGame.landscapeBoardScale);
     _drawBoard(canvas);
     _drawComboDisplay(canvas);
     _drawEarnedDisplay(canvas);
@@ -143,10 +143,10 @@ extension GameRendering on BlockBlastGame {
     final target = tutorial.tutNum == 3 ? const math.Point(3, 3) : const math.Point(4, 4);
     final from = slotCenter(1);
     final to = Vector2(
-      landscapeBoardX +
-          (Design.gridOriginX + target.x * Design.bigSize) * landscapeBoardScale,
-      landscapeBoardY +
-          (Design.gridOriginY + target.y * Design.cellHeight) * landscapeBoardScale,
+      BlockBlastGame.landscapeBoardX +
+          (Design.gridOriginX + target.x * Design.bigSize) * BlockBlastGame.landscapeBoardScale,
+      BlockBlastGame.landscapeBoardY +
+          (Design.gridOriginY + target.y * Design.cellHeight) * BlockBlastGame.landscapeBoardScale,
     );
     final eased = 1 - (1 - moveT) * (1 - moveT);
     final center = Vector2(from.x + (to.x - from.x) * eased,
@@ -174,13 +174,13 @@ extension GameRendering on BlockBlastGame {
     for (var r = 0; r < shape.length; r++) {
       for (var c = 0; c < shape[r].length; c++) {
         if (shape[r][c] == 0) continue;
-        final cx = landscapeBoardX +
-            (Design.gridOriginX + (move.col + c) * Design.bigSize) * landscapeBoardScale;
-        final cy = landscapeBoardY +
-            (Design.gridOriginY + (move.row + r) * Design.cellHeight) * landscapeBoardScale;
+        final cx = BlockBlastGame.landscapeBoardX +
+            (Design.gridOriginX + (move.col + c) * Design.bigSize) * BlockBlastGame.landscapeBoardScale;
+        final cy = BlockBlastGame.landscapeBoardY +
+            (Design.gridOriginY + (move.row + r) * Design.cellHeight) * BlockBlastGame.landscapeBoardScale;
         final rect = Rect.fromCenter(center: Offset(cx, cy),
-            width: (Design.bigSize - 8) * landscapeBoardScale,
-            height: (Design.cellHeight - 8) * landscapeBoardScale);
+            width: (Design.bigSize - 8) * BlockBlastGame.landscapeBoardScale,
+            height: (Design.cellHeight - 8) * BlockBlastGame.landscapeBoardScale);
         canvas.drawRect(rect, fill);
         canvas.drawRect(rect, Paint()..color = const Color(0xFFAAFFF0)
           ..style = PaintingStyle.stroke..strokeWidth = 3);
