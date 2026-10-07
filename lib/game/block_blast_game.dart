@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:ui' show Canvas, Color;
 
 import 'package:flame/components.dart';
+import 'package:flame/camera.dart' show FixedResolutionViewport;
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'bitmap_font.dart';
@@ -42,6 +43,37 @@ class BlockBlastGame extends FlameGame {
     storage = GameStorage();
     audio = GameAudio(() => storage);
     tutorial = TutorialController(this);
+  }
+
+  /// Fit the original portrait design into wide Playables containers while
+  /// retaining its artwork and coordinate-based game rules.
+  bool isLandscape = false;
+  static const double landscapeFitScale = 0.5625;
+  static const double landscapeBoardScale = 0.9;
+  static const double landscapeTrayScale = 0.65;
+  static const double landscapeBoardX = 14;
+  static const double landscapeBoardY = -295.6;
+  static const double landscapeTrayX = 1425;
+  double get landscapeOffsetX => (1920 - Design.width * landscapeFitScale) / 2;
+
+  Vector2 _designPoint(Vector2 point) => isLandscape
+      ? Vector2((point.x - landscapeOffsetX) / landscapeFitScale,
+          point.y / landscapeFitScale)
+      : point.clone();
+
+  @override
+  void onGameResize(Vector2 size) {
+    final nextLandscape = size.x > size.y * 1.12;
+    if (nextLandscape != isLandscape) {
+      isLandscape = nextLandscape;
+      camera.viewport = FixedResolutionViewport(
+        resolution: isLandscape ? Vector2(1920, 1080) : Vector2(1080, 1920),
+      );
+      camera.viewfinder.position = isLandscape
+          ? Vector2(960, 540)
+          : Vector2(Design.width / 2, Design.height / 2);
+    }
+    super.onGameResize(size);
   }
 
   // === Assets & services ===
@@ -92,7 +124,8 @@ class BlockBlastGame extends FlameGame {
   double dragScale = 1; // relative to Design.smallSize
   double _dragStartScale = 1;
   double _dragScaleT = 0;
-  double get boardPieceScale => Design.bigSize / Design.smallSize;
+  double get boardPieceScale =>
+      Design.bigSize / Design.smallSize * (isLandscape ? landscapeBoardScale : 1);
   double dragReturnT = -1; // >= 0 while returning to the tray
   Vector2 returnFrom = Vector2.zero();
   double returnScale = 1;
@@ -158,7 +191,9 @@ class BlockBlastGame extends FlameGame {
 
   @override
   Future<void> onLoad() async {
-    camera.viewfinder.position = Vector2(Design.width / 2, Design.height / 2);
+    camera.viewfinder.position = isLandscape
+        ? Vector2(960, 540)
+        : Vector2(Design.width / 2, Design.height / 2);
     sprites = await SpriteCache.load();
     scoreFont = BitmapFont.digits(sprites.get('txtScore'));
     earnedFont = BitmapFont.digitsPlus(sprites.get('txtEarnedScore'));
@@ -476,6 +511,9 @@ class BlockBlastGame extends FlameGame {
   /// i pezzi non si toccano mai; le forme larghe vengono compattate per
   /// non invadere lo slot vicino (come nel web: clamp a 300px).
   Vector2 slotCenter(int i) {
+    if (isLandscape) {
+      return Vector2(landscapeTrayX, 330 + i * 245);
+    }
     return Vector2(
       Design.traySlot0X + i * Design.traySlotStep,
       Design.trayY,
@@ -489,7 +527,8 @@ class BlockBlastGame extends FlameGame {
     final shape = kShapes[slot.shapeIdx];
     final w = shape[0].length * Design.smallSize;
     final h = shape.length * Design.smallSize;
-    return math.min(1.0, math.min(300 / w, 300 / h));
+    final fit = math.min(1.0, math.min(300 / w, 300 / h));
+    return fit * (isLandscape ? landscapeTrayScale : 1.0);
   }
 
   // =====================================================================
@@ -563,7 +602,7 @@ class BlockBlastGame extends FlameGame {
     finger.x += delta.x;
     finger.y += delta.y;
     // Original: ShapesParent follows the touch, lifted 200px above it.
-    dragPos.setValues(finger.x + dragDX, finger.y - 200);
+    dragPos.setValues(finger.x + dragDX, finger.y - (isLandscape ? 120 : 200));
     _updateSnap();
   }
 
@@ -581,10 +620,20 @@ class BlockBlastGame extends FlameGame {
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         if (shape[r][c] == 0) continue;
-        final bx = dragPos.x + (c - (cols - 1) / 2) * Design.bigSize;
-        final by = dragPos.y + (r - (rows - 1) / 2) * Design.cellHeight;
-        final gx = ((bx - Design.gridOriginX) / Design.bigSize).round();
-        final gy = ((by - Design.gridOriginY) / Design.cellHeight).round();
+        final cellW = Design.bigSize *
+            (isLandscape ? landscapeBoardScale : 1.0);
+        final cellH = Design.cellHeight *
+            (isLandscape ? landscapeBoardScale : 1.0);
+        final originX = isLandscape
+            ? landscapeBoardX + Design.gridOriginX * landscapeBoardScale
+            : Design.gridOriginX;
+        final originY = isLandscape
+            ? landscapeBoardY + Design.gridOriginY * landscapeBoardScale
+            : Design.gridOriginY;
+        final bx = dragPos.x + (c - (cols - 1) / 2) * cellW;
+        final by = dragPos.y + (r - (rows - 1) / 2) * cellH;
+        final gx = ((bx - originX) / cellW).round();
+        final gy = ((by - originY) / cellH).round();
         if (gx < 0 ||
             gx >= Design.gridSize ||
             gy < 0 ||
@@ -1244,11 +1293,11 @@ class BlockBlastGame extends FlameGame {
   // =====================================================================
 
   void handleTapDown(Vector2 p) {
-    pressedButton = _buttonAt(p);
+    pressedButton = isLandscape ? _landscapeButtonAt(p) : _buttonAt(p);
   }
 
   void handleTapUp(Vector2 p) {
-    final btn = _buttonAt(p);
+    final btn = isLandscape ? _landscapeButtonAt(p) : _buttonAt(p);
     final pressed = pressedButton;
     pressedButton = null;
     if (btn == null || btn != pressed) return;
@@ -1325,6 +1374,23 @@ class BlockBlastGame extends FlameGame {
         rankingClose();
         break;
     }
+  }
+
+  String? _landscapeButtonAt(Vector2 point) {
+    if (!hintDialog && !replayOpen && state == GameState.hud) {
+      if (_contains(point, 1760, 106, 128, 128)) return 'hud_pause';
+      if (!tutorial.active && _contains(point, 1600, 106, 112, 112)) {
+        return 'hud_solution';
+      }
+      return null;
+    }
+    if (!hintDialog && !replayOpen && state == GameState.home) {
+      // Home artwork and controls use the original portrait composition,
+      // centered at the landscape viewport's fit scale.
+      return _buttonAt(_designPoint(point));
+    }
+    // Dialogs use the same centered fit scale as the home screen.
+    return _buttonAt(_designPoint(point));
   }
 
   /// Hit-testing for every interactive button, per state — rects from the

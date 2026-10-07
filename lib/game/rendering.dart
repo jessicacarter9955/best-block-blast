@@ -15,7 +15,182 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 /// Bg -> Shadow -> Game -> Tut -> HUD -> Pause -> Revive -> GameOver -> Ranking.
 extension GameRendering on BlockBlastGame {
   void renderWorld(Canvas canvas) {
+    if (isLandscape) {
+      final background = sprites.get(state == GameState.home ? 'BgHome' : 'Bg');
+      background.render(canvas,
+          position: Vector2.zero(), size: Vector2(1920, 1080));
+      if (state == GameState.home) {
+        canvas.save();
+        canvas.translate(landscapeOffsetX, 0);
+        canvas.scale(0.5625);
+        _drawBackground(canvas);
+        _drawHome(canvas);
+        _drawRankingOverlay(canvas);
+        canvas.restore();
+        return;
+      }
+      _drawLandscapeWorld(canvas);
+      return;
+    }
     _drawBackground(canvas);
+    _renderDesignWorld(canvas);
+  }
+
+  void _drawLandscapeWorld(Canvas canvas) {
+    // Keep the full-resolution 8x8 board and all of its original jewel and
+    // line-clear effects on the left, with the tray and controls in a side
+    // rail. Only the board's coordinate transform changes with orientation.
+    canvas.save();
+    canvas.translate(landscapeBoardX, landscapeBoardY);
+    canvas.scale(landscapeBoardScale);
+    _drawBoard(canvas);
+    _drawComboDisplay(canvas);
+    _drawEarnedDisplay(canvas);
+    canvas.restore();
+
+    _drawLandscapePanel(canvas);
+    _drawTray(canvas);
+    _drawLandscapeTutorial(canvas);
+    _drawLandscapeHud(canvas);
+    _drawLandscapeFairHint(canvas);
+
+    final modalOpen = state == GameState.pause ||
+        state == GameState.revive ||
+        state == GameState.gameOver ||
+        state == GameState.ranking ||
+        hintDialog ||
+        replayOpen;
+    if (modalOpen) {
+      canvas.drawRect(
+          const Rect.fromLTWH(0, 0, 1920, 1080),
+          Paint()..color = const Color(0x9906112F));
+      canvas.save();
+      canvas.translate(landscapeOffsetX, 0);
+      canvas.scale(0.5625);
+      _drawBlackBg(canvas);
+      _drawNoSpaceBanner(canvas);
+      _drawReviveOverlay(canvas);
+      _drawGameOverOverlay(canvas);
+      _drawPauseOverlay(canvas);
+      _drawRankingOverlay(canvas);
+      _drawHintDialog(canvas);
+      _drawReplay(canvas);
+      canvas.restore();
+    } else if (state == GameState.hud && noSpaceBanner != null) {
+      _uiText(canvas, this.t('NO SPACE'), 1420, 1000, 54,
+          color: const Color(0xFFFFD269), bold: true);
+    }
+  }
+
+  void _drawLandscapePanel(Canvas canvas) {
+    final panel = RRect.fromRectAndRadius(
+        const Rect.fromLTWH(1000, 28, 890, 1024), const Radius.circular(38));
+    canvas.drawRRect(panel, Paint()..color = const Color(0xA910174D));
+    canvas.drawRRect(
+        panel,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0x7048CFFF));
+    _uiText(canvas, this.t('PIECES'), 1425, 255, 34,
+        color: const Color(0xFFC8D8FF), bold: true);
+    for (var i = 0; i < 3; i++) {
+      final y = 330 + i * 245.0;
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(
+              Rect.fromCenter(center: Offset(1425, y), width: 620, height: 220),
+              const Radius.circular(28)),
+          Paint()..color = const Color(0x552B3180));
+      _uiText(canvas, '${i + 1}', 1120, y, 34,
+          color: const Color(0xFF8FA7E8), bold: true);
+    }
+  }
+
+  void _drawLandscapeHud(Canvas canvas) {
+    _crown(canvas, 1110, 120, 112);
+    _drawGameText(canvas, bestShown.toInt().toString(), 1110, 228, 58,
+        BlockPalette.gold, const Color(0xFF5A1A66), 5, maxWidth: 250);
+    _uiText(canvas, this.t('BEST'), 1110, 268, 23,
+        color: const Color(0xFFC8D8FF), bold: true);
+
+    _uiText(canvas, this.t('SCORE'), 1480, 112, 28,
+        color: const Color(0xFFC8D8FF), bold: true);
+    _drawGameText(canvas, scoreShown.toInt().toString(), 1480, 184, 104,
+        BlockPalette.text, BlockPalette.scoreStroke, 9, maxWidth: 440);
+
+    _roundControl(canvas, 'hud_solution', Icons.question_mark_rounded,
+        1600, 106, 112);
+    _roundControl(canvas, 'hud_pause', Icons.pause_rounded, 1760, 106, 128);
+  }
+
+  void _drawLandscapeTutorial(Canvas canvas) {
+    if (!tutorial.active || state != GameState.hud || dragSlot >= 0) return;
+    final slot = tray[1];
+    if (slot == null || slot.placed) return;
+    final cycle = tutHintT % 2.2;
+    var moveT = 0.0;
+    var fade = 1.0;
+    if (cycle < 0.5) {
+      moveT = cycle / 0.5;
+    } else if (cycle < 0.7) {
+      moveT = 1;
+    } else if (cycle < 1.0) {
+      moveT = 1;
+      fade = 1 - (cycle - 0.7) / 0.3;
+    } else {
+      return;
+    }
+    final target = tutorial.tutNum == 3 ? const math.Point(3, 3) : const math.Point(4, 4);
+    final from = slotCenter(1);
+    final to = Vector2(
+      landscapeBoardX +
+          (Design.gridOriginX + target.x * Design.bigSize) * landscapeBoardScale,
+      landscapeBoardY +
+          (Design.gridOriginY + target.y * Design.cellHeight) * landscapeBoardScale,
+    );
+    final eased = 1 - (1 - moveT) * (1 - moveT);
+    final center = Vector2(from.x + (to.x - from.x) * eased,
+        from.y + (to.y - from.y) * eased);
+    final scale = trayScaleFor(slot) + (boardPieceScale - trayScaleFor(slot)) * eased;
+    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(255, 255, 255, fade));
+    canvas.saveLayer(null, Paint()..color = const Color(0x80FFFFFF));
+    _drawPiece(canvas, slot, center, scale, withShadow: false);
+    canvas.restore();
+    final hand = sprites.get('Hand');
+    final handSize = hand.srcSize * 0.68;
+    hand.render(canvas,
+        position: Vector2(center.x - handSize.x * 0.09,
+            center.y - handSize.y * 0.10),
+        size: handSize);
+    canvas.restore();
+  }
+
+  void _drawLandscapeFairHint(Canvas canvas) {
+    if (tutorial.active || state != GameState.hud || !showSolution ||
+        solution.isEmpty || dragSlot >= 0) return;
+    final move = solution.first;
+    final shape = kShapes[move.shape];
+    final fill = Paint()..color = const Color(0x704FFFE1);
+    for (var r = 0; r < shape.length; r++) {
+      for (var c = 0; c < shape[r].length; c++) {
+        if (shape[r][c] == 0) continue;
+        final cx = landscapeBoardX +
+            (Design.gridOriginX + (move.col + c) * Design.bigSize) * landscapeBoardScale;
+        final cy = landscapeBoardY +
+            (Design.gridOriginY + (move.row + r) * Design.cellHeight) * landscapeBoardScale;
+        final rect = Rect.fromCenter(center: Offset(cx, cy),
+            width: (Design.bigSize - 8) * landscapeBoardScale,
+            height: (Design.cellHeight - 8) * landscapeBoardScale);
+        canvas.drawRect(rect, fill);
+        canvas.drawRect(rect, Paint()..color = const Color(0xFFAAFFF0)
+          ..style = PaintingStyle.stroke..strokeWidth = 3);
+      }
+    }
+    _uiText(canvas, '${this.t('SAFE MOVE')} · ${this.t('Piece')} ${move.slot + 1}',
+        1440, 1000, 28, color: const Color(0xFFBAFFF2), bold: true);
+  }
+
+  void _renderDesignWorld(Canvas canvas) {
     if (state == GameState.home) {
       _drawHome(canvas);
       _drawRankingOverlay(canvas);

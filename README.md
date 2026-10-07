@@ -23,4 +23,4 @@ Il workflow GitHub Actions prepara l’APK Android e il pacchetto Web. Per le is
 - `test/`: test di generazione dei vassoi e geometria del trascinamento.
 - `web/`: configurazione e punto d’ingresso per la build web.
 
-Il progetto usa Flame per il rendering del gioco e mantiene un’area di disegno verticale adattabile allo schermo.
+Il progetto usa Flame per il rendering del gioco e adatta l'interfaccia all'orientamento dello schermo: griglia a sinistra e vassoi e comandi nel pannello laterale in orizzontale.

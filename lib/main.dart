@@ -5,16 +5,16 @@ import 'game/block_blast_game.dart';
 import 'game/palette.dart';
 
 void main() {
-  runApp(const ChocoBlockApp());
+  runApp(const BlockRushApp());
 }
 
-class ChocoBlockApp extends StatelessWidget {
-  const ChocoBlockApp({super.key});
+class BlockRushApp extends StatelessWidget {
+  const BlockRushApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Block Blast',
+      title: 'Block Rush',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
