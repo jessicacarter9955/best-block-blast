@@ -76,7 +76,7 @@ extension GameRendering on BlockBlastGame {
           ..strokeWidth = 4);
     _uiText(
         canvas,
-        '${game.t('Piece')} ${move.slot + 1} → ${game.t('highlighted cells · verified moves:')} ${solution.length}',
+        '${t('Piece')} ${move.slot + 1} → ${t('highlighted cells · verified moves:')} ${solution.length}',
         540,
         1408,
         29,
@@ -515,7 +515,7 @@ extension GameRendering on BlockBlastGame {
       canvas.restore();
       _sparkle(canvas, x + 24, y - 30, 10, const Color(0xFFFFFFFF));
     }
-    _drawGameText(canvas, game.t('COMBO'), 0, -38, 94, const Color(0xFFFFFFFF),
+    _drawGameText(canvas, t('COMBO'), 0, -38, 94, const Color(0xFFFFFFFF),
         const Color(0xFF592DB3), 10);
     _drawGameText(canvas, '×${math.max(1, cd.combo)}', 0, 68, 118,
         const Color(0xFFFFD45C), const Color(0xFF71359E), 9);
@@ -543,7 +543,7 @@ extension GameRendering on BlockBlastGame {
     _drawGameText(canvas, text, 0, 0, size, const Color(0xFFFFF0A6),
         const Color(0xFF55318F), 8);
     if (ed.lines >= 2) {
-      _uiText(canvas, game.t(ed.lines >= 3 ? 'BRILLIANT!' : 'DAZZLING!'), 0, 92, 38,
+      _uiText(canvas, t(ed.lines >= 3 ? 'BRILLIANT!' : 'DAZZLING!'), 0, 92, 38,
           title: true, color: const Color(0xFF8EF1FF));
     }
     canvas.restore();
@@ -587,10 +587,10 @@ extension GameRendering on BlockBlastGame {
     _panel(canvas, const Rect.fromLTWH(98, 400, 884, 1120));
     _gem(canvas, 540, 610, 130, const Color(0xFF5CDFF4));
     _sparkle(canvas, 640, 550, 26, const Color(0xFFFFE8A4));
-    _uiText(canvas, game.t('ONE MORE CHANCE'), 540, 780, 61, title: true);
-    _uiText(canvas, game.t('Your next combo is waiting.'), 540, 867, 36,
+    _uiText(canvas, t('ONE MORE CHANCE'), 540, 780, 61, title: true);
+    _uiText(canvas, t('Your next combo is waiting.'), 540, 867, 36,
         color: const Color(0xFFB7CDF4));
-    _uiText(canvas, game.t('Keep your score. Get fresh pieces.'), 540, 925, 32,
+    _uiText(canvas, t('Keep your score. Get fresh pieces.'), 540, 925, 32,
         color: const Color(0xFFB7CDF4));
     final arc = Rect.fromCircle(center: const Offset(540, 1060), radius: 64);
     canvas.drawArc(
@@ -610,10 +610,10 @@ extension GameRendering on BlockBlastGame {
         canvas,
         'revive_btn',
         reviveAdBusy
-            ? game.t('AD PLAYING…')
+            ? t('AD PLAYING…')
             : reviveAdReady
-                ? game.t('WATCH AD & CONTINUE')
-                : game.t('FREE CONTINUE'),
+                ? t('WATCH AD & CONTINUE')
+                : t('FREE CONTINUE'),
         Icons.play_circle_rounded,
         540,
         1250,
@@ -624,15 +624,15 @@ extension GameRendering on BlockBlastGame {
     _uiText(
         canvas,
         reviveAdReady
-            ? game.t('Watch a short video to keep your score.')
-            : game.t('No ad required in this preview'),
+            ? t('Watch a short video to keep your score.')
+            : t('No ad required in this preview'),
         540,
         1353,
         27,
         color: const Color(0xFF92B3E8));
-    _uiText(canvas, game.t('END RUN'), 540, 1440, 34, bold: true);
+    _uiText(canvas, t('END RUN'), 540, 1440, 34, bold: true);
     if (replayMoves.isNotEmpty) {
-      _actionButton(canvas, 'replay_open', game.t('VIEW SOLUTION'),
+      _actionButton(canvas, 'replay_open', t('VIEW SOLUTION'),
           Icons.replay_rounded, 540, 1585, 650, 92,
           labelSize: 32);
     }
@@ -644,20 +644,20 @@ extension GameRendering on BlockBlastGame {
         Paint()..color = const Color(0xD908102B));
     _panel(canvas, const Rect.fromLTWH(98, 460, 884, 1040));
     _roundControl(canvas, 'hint_close', Icons.close_rounded, 902, 550, 88);
-    _uiText(canvas, game.t('NEED A HINT?'), 540, 700, 54, title: true);
+    _uiText(canvas, t('NEED A HINT?'), 540, 700, 54, title: true);
     _uiText(
         canvas,
         solution.isEmpty
-            ? game.t('The move sequence is no longer available.')
-            : game.t('Watch a short video to reveal'),
+            ? t('The move sequence is no longer available.')
+            : t('Watch a short video to reveal'),
         540,
         850,
         34);
     _uiText(
         canvas,
         solution.isEmpty
-            ? game.t('Review the moves leading to the end.')
-            : game.t('the next piece and where to place it.'),
+            ? t('Review the moves leading to the end.')
+            : t('the next piece and where to place it.'),
         540,
         910,
         32);
@@ -665,10 +665,10 @@ extension GameRendering on BlockBlastGame {
         canvas,
         solution.isEmpty ? 'replay_open' : 'hint_ad',
         solution.isEmpty
-            ? game.t('VIEW REPLAY')
+            ? t('VIEW REPLAY')
             : hintBusy
-                ? game.t('LOADING…')
-                : game.t('WATCH VIDEO'),
+                ? t('LOADING…')
+                : t('WATCH VIDEO'),
         Icons.play_arrow_rounded,
         540,
         1120,
@@ -677,11 +677,11 @@ extension GameRendering on BlockBlastGame {
         primary: true,
         labelSize: 40);
     if (hintMessage != null) {
-      _uiText(canvas, game.t(hintMessage!), 540, 1250, 26,
+      _uiText(canvas, t(hintMessage!), 540, 1250, 26,
           color: const Color(0xFFFFD05A));
     }
     if (kDebugMode && solution.isNotEmpty) {
-      _actionButton(canvas, 'hint_demo', game.t('TRY HINT · DEMO'),
+      _actionButton(canvas, 'hint_demo', t('TRY HINT · DEMO'),
           Icons.lightbulb_outline, 540, 1390, 600, 90,
           labelSize: 25);
     }
@@ -693,7 +693,7 @@ extension GameRendering on BlockBlastGame {
         Paint()..color = const Color(0xF208102B));
     _panel(canvas, const Rect.fromLTWH(98, 260, 884, 1400));
     _roundControl(canvas, 'replay_close', Icons.close_rounded, 902, 350, 88);
-    _uiText(canvas, game.t('ONE POSSIBLE SOLUTION'), 540, 415, 44, title: true);
+    _uiText(canvas, t('ONE POSSIBLE SOLUTION'), 540, 415, 44, title: true);
     final completed = math.min(replayMoves.length, (replayTime / 3).floor());
     final active =
         completed < replayMoves.length ? replayMoves[completed] : null;
@@ -745,15 +745,15 @@ extension GameRendering on BlockBlastGame {
     _uiText(
         canvas,
         active == null
-            ? game.t('All pieces fit on the board.')
-            : '${game.t('Move')} ${completed + 1}/${replayMoves.length} · ${game.t('piece')} ${active.slot + 1}',
+            ? t('All pieces fit on the board.')
+            : '${t('Move')} ${completed + 1}/${replayMoves.length} · ${t('piece')} ${active.slot + 1}',
         540,
         1360,
         34,
         color: const Color(0xFFAAFFF0));
-    _uiText(canvas, game.t('Replay demo · score unchanged'), 540, 1430, 27,
+    _uiText(canvas, t('Replay demo · score unchanged'), 540, 1430, 27,
         color: const Color(0xFFB7CDF4));
-    _actionButton(canvas, 'replay_restart', game.t('REPLAY AGAIN'),
+    _actionButton(canvas, 'replay_restart', t('REPLAY AGAIN'),
         Icons.replay_rounded, 540, 1580, 640, 100,
         labelSize: 34);
   }
@@ -762,26 +762,26 @@ extension GameRendering on BlockBlastGame {
     if (state != GameState.gameOver) return;
     _panel(canvas, const Rect.fromLTWH(98, 350, 884, 1260));
     _crown(canvas, 540, 535, 205);
-    _uiText(canvas, game.t('GREAT RUN!'), 540, 710, 80, title: true);
-    _uiText(canvas, game.t('Every round is a fresh start.'), 540, 793, 34,
+    _uiText(canvas, t('GREAT RUN!'), 540, 710, 80, title: true);
+    _uiText(canvas, t('Every round is a fresh start.'), 540, 793, 34,
         color: const Color(0xFFB7CDF4));
-    _uiText(canvas, game.t('YOUR SCORE'), 540, 905, 30,
+    _uiText(canvas, t('YOUR SCORE'), 540, 905, 30,
         color: const Color(0xFF92B3E8), bold: true);
     _drawGameText(canvas, _formatScore(goScoreShown.toInt()), 540, 1020, 112,
         const Color(0xFFFFFFFF), const Color(0xFF123274), 8);
-    _drawGameText(canvas, '${game.t('BEST SCORE')}  ${_formatScore(storage.bestScore)}', 540, 1135,
+    _drawGameText(canvas, '${t('BEST SCORE')}  ${_formatScore(storage.bestScore)}', 540, 1135,
         40, const Color(0xFFFFD05A), const Color(0xFF123274), 2,
         maxWidth: 760);
     if (replayMoves.isNotEmpty) {
-      _actionButton(canvas, 'replay_open', game.t('VIEW SOLUTION'),
+      _actionButton(canvas, 'replay_open', t('VIEW SOLUTION'),
           Icons.replay_rounded, 540, 1205, 650, 80,
           labelSize: 34);
     }
-    _actionButton(canvas, 'go_reset', game.t('PLAY AGAIN'), Icons.refresh_rounded, 540,
+    _actionButton(canvas, 'go_reset', t('PLAY AGAIN'), Icons.refresh_rounded, 540,
         1330, 712, 148,
         primary: true, labelSize: 50);
     _actionButton(
-        canvas, 'go_home', game.t('HOME'), Icons.home_rounded, 540, 1490, 400, 96,
+        canvas, 'go_home', t('HOME'), Icons.home_rounded, 540, 1490, 400, 96,
         labelSize: 34);
   }
 
@@ -799,36 +799,36 @@ extension GameRendering on BlockBlastGame {
         ));
     _roundControl(canvas, 'pause_close', Icons.close_rounded, Design.btnCloseX,
         Design.btnCloseY, Design.btnCloseSize);
-    _uiText(canvas, game.t('PAUSED'), 540, 500, 76, title: true);
-    _uiText(canvas, game.t('Ready when you are.'), 540, 573, 34,
+    _uiText(canvas, t('PAUSED'), 540, 500, 76, title: true);
+    _uiText(canvas, t('Ready when you are.'), 540, 573, 34,
         color: const Color(0xFFB7CDF4));
     _actionButton(
         canvas,
         'pause_resume',
-        game.t('RESUME'),
+        t('RESUME'),
         Icons.play_arrow_rounded,
         Design.btnResumeX,
         Design.btnResumeY,
         Design.btnResumeW,
         Design.btnResumeH,
         primary: true);
-    _settingRow(canvas, 'pause_sfx', game.t('Sound effects'), Icons.volume_up_rounded,
+    _settingRow(canvas, 'pause_sfx', t('Sound effects'), Icons.volume_up_rounded,
         Design.btnSfxY, storage.sfxOn);
-    _settingRow(canvas, 'pause_music', game.t('Music'), Icons.music_note_rounded,
+    _settingRow(canvas, 'pause_music', t('Music'), Icons.music_note_rounded,
         Design.btnMusicY, storage.musicOn);
     _actionButton(
         canvas,
         'pause_ranking',
-        game.t('LEADERBOARD'),
+        t('LEADERBOARD'),
         Icons.emoji_events_rounded,
         Design.btnShowRankingX,
         Design.btnShowRankingY,
         Design.btnShowRankingW,
         Design.btnShowRankingH);
-    _actionButton(canvas, 'pause_home', game.t('HOME'), Icons.home_rounded,
+    _actionButton(canvas, 'pause_home', t('HOME'), Icons.home_rounded,
         Design.btnHomeX, Design.btnHomeY, Design.btnHomeW, Design.btnHomeH,
         labelSize: 34);
-    _actionButton(canvas, 'pause_reset', game.t('RESTART'), Icons.refresh_rounded,
+    _actionButton(canvas, 'pause_reset', t('RESTART'), Icons.refresh_rounded,
         Design.btnResetX, Design.btnResetY, Design.btnResetW, Design.btnResetH,
         labelSize: 34);
     canvas.restore();
@@ -848,15 +848,15 @@ extension GameRendering on BlockBlastGame {
         ));
     _icon(canvas, Icons.emoji_events_rounded, 540, 260, 96,
         const Color(0xFFFFD05A));
-    _uiText(canvas, game.t('LEADERBOARD'), 540, Design.lbTitleY, 62, title: true);
-    _uiText(canvas, game.t('A little better. Every round.'), 540, 432, 32,
+    _uiText(canvas, t('LEADERBOARD'), 540, Design.lbTitleY, 62, title: true);
+    _uiText(canvas, t('A little better. Every round.'), 540, 432, 32,
         color: const Color(0xFFB7CDF4));
     _roundControl(canvas, 'ranking_close', Icons.close_rounded, Design.lbCloseX,
         Design.lbCloseY, Design.lbCloseSize);
-    _uiText(canvas, game.t('RANK'), 190, 518, 25, color: const Color(0xFF92B3E8));
-    _uiText(canvas, game.t('PLAYER'), 288, 518, 25,
+    _uiText(canvas, t('RANK'), 190, 518, 25, color: const Color(0xFF92B3E8));
+    _uiText(canvas, t('PLAYER'), 288, 518, 25,
         color: const Color(0xFF92B3E8), align: TextAlign.left);
-    _uiText(canvas, game.t('BEST SCORE'), 902, 518, 25,
+    _uiText(canvas, t('BEST SCORE'), 902, 518, 25,
         color: const Color(0xFF92B3E8), align: TextAlign.right);
 
     final rows = data.topRows;
@@ -894,7 +894,7 @@ extension GameRendering on BlockBlastGame {
             Paint()..color = rankColor.withValues(alpha: 0.16));
       }
       _uiText(canvas, '${i + 1}', 190, y, 32, color: rankColor, bold: true);
-      _uiText(canvas, isYou ? game.t('You') : entry.name, 288, y, 34,
+      _uiText(canvas, isYou ? t('You') : entry.name, 288, y, 34,
           align: TextAlign.left, maxWidth: 330, bold: isYou);
       _uiText(canvas, _formatScore(entry.score), 902, y, 34,
           shrink: true,
@@ -915,9 +915,9 @@ extension GameRendering on BlockBlastGame {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2);
     _icon(canvas, Icons.person_rounded, 202, 1579, 62, const Color(0xFF8CECF3));
-    _uiText(canvas, game.t('YOUR BEST'), 260, 1556, 26,
+    _uiText(canvas, t('YOUR BEST'), 260, 1556, 26,
         color: const Color(0xFFB7CDF4), align: TextAlign.left);
-    _uiText(canvas, '${game.t('Rank')} #${data.yourRank}', 260, 1601, 32,
+    _uiText(canvas, '${t('Rank')} #${data.yourRank}', 260, 1601, 32,
         align: TextAlign.left, bold: true);
     _uiText(canvas, _formatScore(storage.bestScore), 900, 1580, 46,
         shrink: true,
@@ -925,12 +925,12 @@ extension GameRendering on BlockBlastGame {
         align: TextAlign.right,
         color: const Color(0xFFFFD05A),
         bold: true);
-    _uiText(canvas, game.t('Keep playing. Keep climbing.'), 540, 1698, 28,
+    _uiText(canvas, t('Keep playing. Keep climbing.'), 540, 1698, 28,
         color: const Color(0xFF92B3E8));
   }
 
   void _drawHome(Canvas canvas) {
-    _actionButton(canvas, 'home_play', game.t('PLAY'), Icons.play_arrow_rounded,
+    _actionButton(canvas, 'home_play', t('PLAY'), Icons.play_arrow_rounded,
         Design.btnPlayX, Design.btnPlayY, Design.btnPlayW, Design.btnPlayH,
         primary: true, labelSize: 88);
     _roundControl(canvas, 'home_ranking', Icons.emoji_events_rounded, 539,
