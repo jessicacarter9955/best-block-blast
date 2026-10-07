@@ -1,6 +1,5 @@
 name: chocoblock
-description: Native Flutter port of Block Blast — 1:1 with the original
-  Construct 3 game (original sprites, geometry, scoring, tutorial and flows).
+description: Puzzle game built with Flutter and Flame for Android and Web.
 publish_to: "none"
 version: 1.0.0+4
 
