@@ -733,13 +733,11 @@ class _BoardPainter extends CustomPainter {
         ..moveTo(rect.left + cell * .16, slash ? rect.bottom - cell * .14 : rect.top + cell * .14)
         ..lineTo(rect.right - cell * .16, slash ? rect.top + cell * .14 : rect.bottom - cell * .14);
       canvas.drawPath(mirrorLine, Paint()
-        ..style = PaintingStyle.stroke
         ..color = color
         ..strokeWidth = cell * .075
         ..strokeCap = StrokeCap.round
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * .025));
       canvas.drawPath(mirrorLine, Paint()
-        ..style = PaintingStyle.stroke
         ..color = Colors.white.withOpacity(.95)
         ..strokeWidth = cell * .026
         ..strokeCap = StrokeCap.round);
