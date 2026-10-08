@@ -26,9 +26,9 @@ extension GameRendering on BlockBlastGame {
         canvas.translate(landscapeOffsetX, 0);
         canvas.scale(0.5625);
         _drawBackground(canvas);
-        _drawHome(canvas);
         _drawRankingOverlay(canvas);
         canvas.restore();
+        _drawLandscapeHome(canvas);
         return;
       }
       _drawLandscapeWorld(canvas);
@@ -105,6 +105,25 @@ extension GameRendering on BlockBlastGame {
       _uiText(canvas, '${i + 1}', 1120, y, 34,
           color: const Color(0xFF8FA7E8), bold: true);
     }
+  }
+
+  void _drawLandscapeHome(Canvas canvas) {
+    // The original home artwork is portrait. Keep its logo crisp and centered,
+    // while arranging the play action and utility controls across the wider
+    // canvas so landscape screens use their space intentionally.
+    _actionButton(canvas, 'home_play', this.t('PLAY'), Icons.play_arrow_rounded,
+        960, 752, 800, 190,
+        primary: true, labelSize: 72);
+    _roundControl(canvas, 'home_sfx',
+        storage.sfxOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+        760, 950, 132,
+        active: storage.sfxOn);
+    _roundControl(canvas, 'home_ranking', Icons.emoji_events_rounded,
+        960, 950, 132);
+    _roundControl(canvas, 'home_music',
+        storage.musicOn ? Icons.music_note_rounded : Icons.music_off_rounded,
+        1160, 950, 132,
+        active: storage.musicOn);
   }
 
   void _drawLandscapeHud(Canvas canvas) {

@@ -56,6 +56,9 @@ class BlockBlastGame extends FlameGame {
   static const double landscapeTrayX = 1425;
   double get landscapeOffsetX => (1920 - Design.width * landscapeFitScale) / 2;
 
+  static bool usesLandscapeLayout(double width, double height) =>
+      width > height * 0.98;
+
   Vector2 _designPoint(Vector2 point) => isLandscape
       ? Vector2((point.x - landscapeOffsetX) / landscapeFitScale,
           point.y / landscapeFitScale)
@@ -63,7 +66,10 @@ class BlockBlastGame extends FlameGame {
 
   @override
   void onGameResize(Vector2 size) {
-    final nextLandscape = size.x > size.y * 1.12;
+    // A near-square tablet still benefits from the board + side-tray layout;
+    // keep portrait only when the available width would make that board too
+    // small to play comfortably.
+    final nextLandscape = usesLandscapeLayout(size.x, size.y);
     if (nextLandscape != isLandscape) {
       isLandscape = nextLandscape;
       camera.viewport = FixedResolutionViewport(
@@ -1385,9 +1391,14 @@ class BlockBlastGame extends FlameGame {
       return null;
     }
     if (!hintDialog && !replayOpen && state == GameState.home) {
-      // Home artwork and controls use the original portrait composition,
-      // centered at the landscape viewport's fit scale.
-      return _buttonAt(_designPoint(point));
+      if (rankingData != null) {
+        return _buttonAt(_designPoint(point));
+      }
+      if (_contains(point, 960, 752, 800, 190)) return 'home_play';
+      if (_contains(point, 760, 950, 132, 132)) return 'home_sfx';
+      if (_contains(point, 960, 950, 132, 132)) return 'home_ranking';
+      if (_contains(point, 1160, 950, 132, 132)) return 'home_music';
+      return null;
     }
     // Dialogs use the same centered fit scale as the home screen.
     return _buttonAt(_designPoint(point));
