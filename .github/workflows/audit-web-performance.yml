@@ -1,0 +1,55 @@
+name: Audit Flutter Web Performance (Lighthouse)
+
+# Free, on-demand browser audit. Reports are saved privately as CI artifacts;
+# no source files or gameplay assets are uploaded to public Lighthouse services.
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+    paths:
+      - 'lib/**'
+      - 'assets/**'
+      - 'web/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/audit-web-performance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  web-lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build Flutter Web release
+        run: |
+          flutter pub get
+          flutter test
+          flutter build web --release --no-tree-shake-icons --base-href /
+          du -sh build/web
+      - name: Audit in headless Chrome
+        run: |
+          mkdir -p artifacts
+          python3 -m http.server 8181 --bind 127.0.0.1 --directory build/web \
+            > /tmp/blockrush-web-server.log 2>&1 &
+          for retry in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://127.0.0.1:8181/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:8181/ \
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+            --only-categories=performance \
+            --output=html --output=json \
+            --output-path=artifacts/blockrush-lighthouse \
+            --quiet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blockrush-lighthouse-report
+          path: artifacts/blockrush-lighthouse.*
+          retention-days: 30
+          if-no-files-found: error
