@@ -1582,6 +1582,7 @@ class GameCanvas extends Component with TapCallbacks, DragCallbacks {
   GameCanvas(this.game);
 
   final BlockBlastGame game;
+  bool _firstFrameReported = false;
 
   @override
   bool containsLocalPoint(Vector2 point) => true;
@@ -1633,5 +1634,9 @@ class GameCanvas extends Component with TapCallbacks, DragCallbacks {
   @override
   void render(Canvas canvas) {
     game.renderWorld(canvas);
+    if (!_firstFrameReported) {
+      _firstFrameReported = true;
+      markFirstGameplayFrame();
+    }
   }
 }

@@ -22,6 +22,9 @@
   <meta name="theme-color" content="#0A1755">
   <meta name="description" content="Block Rush — a colorful block-clearing puzzle game.">
 
+  <!-- Start real canvas first-frame timing before Flutter bootstraps. -->
+  <script>performance.mark('blockrush-html-start');</script>
+
   <style>
     html, body {
       width: 100%;
