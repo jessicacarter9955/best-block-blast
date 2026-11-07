@@ -79,11 +79,26 @@ jobs:
           echo "APK_PATH=artifacts/block-rush-release-${VERSION}.apk" >> $GITHUB_ENV
           echo "APK_NAME=block-rush-release-${VERSION}.apk" >> $GITHUB_ENV
 
+      - name: Verify release APK and publish checksum
+        shell: bash
+        run: |
+          test -s "${APK_PATH}"
+          unzip -t "${APK_PATH}" >/dev/null
+          sha256sum "${APK_PATH}" > "${APK_PATH}.sha256"
+          {
+            echo '## Android APK release build'
+            echo "- APK: \`${APK_NAME}\`"
+            echo "- SHA-256: \`$(cut -d ' ' -f1 "${APK_PATH}.sha256")\`"
+            echo '- Package uses the release build mode, but is debug-key signed for sideload testing; it is NOT a Google Play production release.'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_NAME }}
-          path: artifacts/*.apk
+          path: |
+            artifacts/*.apk
+            artifacts/*.apk.sha256
           retention-days: 90
           if-no-files-found: error
 
