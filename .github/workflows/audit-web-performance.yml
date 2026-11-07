@@ -41,27 +41,35 @@ jobs:
             if curl -fsS http://127.0.0.1:8181/ -o /dev/null; then break; fi
             sleep 1
           done
-          npx --yes lighthouse@12.8.2 http://127.0.0.1:8181/ \
-            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
-            --only-categories=performance \
-            --output=html --output=json \
-            --output-path=artifacts/blockrush-lighthouse \
-            --quiet
-      - name: Verify real canvas startup timing
+          # Three independent Lighthouse navigations use fresh browser
+          # profiles (cold-cache startup). A one-shot run varies too much with
+          # Playgama CDN latency to be useful as a performance regression test.
+          for sample in 1 2 3; do
+            npx --yes lighthouse@12.8.2 http://127.0.0.1:8181/ \
+              --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+              --only-categories=performance \
+              --output=html --output=json \
+              --output-path="artifacts/blockrush-lighthouse-cold-${sample}" \
+              --quiet
+          done
+      - name: Verify three real canvas startup timings
         run: |
           # Flutter canvas often yields NO_LCP, making Lighthouse's generic
           # score null even when the audit itself completed. The game instead
           # emits a User Timing measure after its first Flame scene render.
-          REPORT=artifacts/blockrush-lighthouse.report.json
-          jq '{lighthouseScore:.categories.performance.score, FCP_ms:.audits["first-contentful-paint"].numericValue, LCP_ms:.audits["largest-contentful-paint"].numericValue, CLS:.audits["cumulative-layout-shift"].numericValue}' "$REPORT"
-          STARTUP_MS=$(jq -er '[.audits["user-timings"].details.items[]? | select(.name == "blockrush-gameplay-startup") | .duration] | first' "$REPORT")
-          echo "Block Rush first Flame frame: ${STARTUP_MS} ms"
-          echo "Canvas startup: ${STARTUP_MS} ms (budget 20000 ms)" >> "$GITHUB_STEP_SUMMARY"
-          STARTUP_MS="$STARTUP_MS" node -e 'const ms=Number(process.env.STARTUP_MS); if(!Number.isFinite(ms) || ms > 20000) { console.error("Startup regression or missing frame:", ms); process.exit(1); }'
+          REPORTS=(artifacts/blockrush-lighthouse-cold-*.report.json)
+          jq -s '[.[] | {FCP_ms:.audits["first-contentful-paint"].numericValue, LCP_ms:.audits["largest-contentful-paint"].numericValue, CLS:.audits["cumulative-layout-shift"].numericValue, performanceScore:.categories.performance.score}]' "${REPORTS[@]}"
+          STARTUP_SAMPLES=$(jq -ser '[.[] | .audits["user-timings"].details.items[]? | select(.name == "blockrush-gameplay-startup") | .duration] | sort | if length == 3 then . else error("missing Flame first-frame measurements") end' "${REPORTS[@]}")
+          STARTUP_MEDIAN=$(printf '%s' "$STARTUP_SAMPLES" | jq '.[1]')
+          STARTUP_P95=$(printf '%s' "$STARTUP_SAMPLES" | jq '.[2]')
+          echo "Cold-profile first Flame frame samples (ms): $STARTUP_SAMPLES"
+          echo "Canvas startup cold-cache median: ${STARTUP_MEDIAN} ms, p95 (nearest-rank, n=3): ${STARTUP_P95} ms" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Warm-cache startup and sustained FPS are not measured by this audit.' >> "$GITHUB_STEP_SUMMARY"
+          STARTUP_MAX_MS="$STARTUP_P95" node -e 'const ms=Number(process.env.STARTUP_MAX_MS); if(!Number.isFinite(ms) || ms > 20000) { console.error("Startup regression or missing frame:", ms); process.exit(1); }'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: blockrush-lighthouse-report
-          path: artifacts/blockrush-lighthouse.*
+          path: artifacts/blockrush-lighthouse-cold-*.*
           retention-days: 30
           if-no-files-found: error
