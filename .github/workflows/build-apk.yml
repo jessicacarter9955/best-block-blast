@@ -52,7 +52,7 @@ jobs:
 
       - name: Apply custom Android overrides
         # Overlays our custom AndroidManifest.xml (Block Rush label,
-        # portrait lock), dark theme styles, 5-density launcher icons,
+        # user-controlled rotation), dark theme styles, 5-density launcher icons,
         # proguard rules, and patches build.gradle.kts for minSdk=21 +
         # release signing with debug key.
         run: bash setup/apply-android-overrides.sh

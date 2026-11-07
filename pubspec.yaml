@@ -29,6 +29,7 @@ flutter:
     - assets/audio/cheerful/
     - assets/sprites-named/
     - assets/rush/
+    - artwork/resolution-pack/backgrounds/
     # manifest.json is in the same folder, listed above
     - assets/data/ranking.json
   fonts:
