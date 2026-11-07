@@ -6,7 +6,7 @@ name: Build Block Rush Desktop (Windows + Linux)
 on:
   workflow_dispatch:
   push:
-    branches: [master, main]
+    branches: [master, main, codex/blockrush-six-resolution-artwork]
     paths:
       - 'lib/**'
       - 'assets/**'

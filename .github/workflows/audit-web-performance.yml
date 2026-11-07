@@ -5,7 +5,7 @@ name: Audit Flutter Web Performance (Lighthouse)
 on:
   workflow_dispatch:
   push:
-    branches: [master, main]
+    branches: [master, main, codex/blockrush-six-resolution-artwork]
     paths:
       - 'lib/**'
       - 'assets/**'
