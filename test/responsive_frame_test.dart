@@ -1,7 +1,44 @@
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:block_rush/game/responsive_frame.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('all 12 selectable scene backgrounds are included in Flutter assets',
+      () async {
+    const viewports = <({double width, double height})>[
+      (width: 1080, height: 1920),
+      (width: 2160, height: 3840),
+      (width: 1920, height: 1080),
+      (width: 3840, height: 2160),
+      (width: 3440, height: 1440),
+      (width: 2048, height: 2048),
+    ];
+    final observedPaths = <String>{};
+
+    for (final home in [true, false]) {
+      for (final viewport in viewports) {
+        final plan = ResponsiveGameFrame.forSize(
+          width: viewport.width,
+          height: viewport.height,
+          home: home,
+        );
+        final path = plan.backgroundAsset;
+        expect(observedPaths.add(path), isTrue, reason: 'duplicate asset: $path');
+        final data = await rootBundle.load(path);
+        expect(data.lengthInBytes, greaterThan(32), reason: path);
+        expect(
+          String.fromCharCodes(
+              data.buffer.asUint8List(data.offsetInBytes, 4)),
+          'RIFF',
+          reason: 'background must be a readable WebP: $path',
+        );
+      }
+    }
+    expect(observedPaths, hasLength(12));
+  });
+
   test('original 1080×1920 canvas remains exact on portrait', () {
     final f = ResponsiveGameFrame.forSize(width: 1080, height: 1920);
     expect(f.format, FrameFormat.portrait);

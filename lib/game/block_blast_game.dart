@@ -159,13 +159,19 @@ class BlockBlastGame extends FlameGame {
   @override
   Future<void> onLoad() async {
     camera.viewfinder.position = Vector2(Design.width / 2, Design.height / 2);
+    // Start independent network/asset work together. In particular, waiting
+    // for a blocked Playgama CDN must not postpone all sprite downloads.
+    // Platform initialization is still awaited before loading persistence so
+    // a hosted game's cloud save never falls back to local preferences.
+    final platformInitialization = isYoutubePlayablesBuild
+        ? initYoutubePlayables()
+        : initPlaygama();
+    final audioInitialization = audio.init();
     sprites = await SpriteCache.load();
     scoreFont = BitmapFont.digits(sprites.get('txtScore'));
     earnedFont = BitmapFont.digitsPlus(sprites.get('txtEarnedScore'));
     comboFont = BitmapFont.comboBig(sprites.get('txtComboNum'));
-    final platformReady = isYoutubePlayablesBuild
-        ? await initYoutubePlayables()
-        : await initPlaygama();
+    final platformReady = await platformInitialization;
     if (platformReady) {
       language = isYoutubePlayablesBuild
           ? await youtubeLanguage()
@@ -186,7 +192,7 @@ class BlockBlastGame extends FlameGame {
         onAudio: audio.setHostAudioEnabled,
       );
     }
-    await audio.init();
+    await audioInitialization;
     bestShown = storage.bestScore.toDouble();
     // Playgama Bridge (ads + multi-piattaforma), 1:1 col port web: il
     // provider rewarded si registra SOLO se la piattaforma li supporta
