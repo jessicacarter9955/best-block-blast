@@ -64,7 +64,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Letterbox fill matching the original background gradient tone.
+      // Fallback while the single full-bleed wallpaper decodes.
       backgroundColor: BlockPalette.bg,
       body: SafeArea(
         top: false,
@@ -79,8 +79,10 @@ class _GameScreenState extends State<GameScreen> {
           return Stack(
             fit: StackFit.expand,
             children: [
-              // No black/solid side letterboxing on desktop, square or
-              // ultrawide. This background does NOT handle touch events.
+              // The wallpaper is the sole scene background. Flame draws only
+              // gameplay and UI on top with a transparent canvas, so no
+              // duplicated image edges appear above/below the 9:16 viewport
+              // on taller phones or beside it on wider displays.
               Image.asset(
                 plan.backgroundAsset,
                 fit: BoxFit.cover,

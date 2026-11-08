@@ -151,10 +151,11 @@ class BlockBlastGame extends FlameGame {
   final List<Scheduled> _pending = [];
   int _scheduledSerial = 0;
 
-  /// Letterbox color matching the Block Rush background (flat #4E076D,
-  /// sampled from the real game).
+  /// Leave the Flame viewport transparent: GameScreen renders one continuous
+  /// full-bleed scene wallpaper behind the home, tutorial and gameplay HUD.
+  /// An opaque canvas would cut out a 9:16 rectangle on taller screens.
   @override
-  Color backgroundColor() => const Color(0xFF0A1755);
+  Color backgroundColor() => const Color(0x00000000);
 
   @override
   Future<void> onLoad() async {
