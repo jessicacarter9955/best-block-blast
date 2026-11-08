@@ -15,7 +15,9 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 /// Bg -> Shadow -> Game -> Tut -> HUD -> Pause -> Revive -> GameOver -> Ranking.
 extension GameRendering on BlockBlastGame {
   void renderWorld(Canvas canvas) {
-    _drawBackground(canvas);
+    // The scene wallpaper is painted exactly once by GameScreen, behind the
+    // transparent Flame viewport. Drawing it again inside the 1080x1920
+    // letterboxed game causes horizontal seams on taller phones (20:9, etc.).
     if (state == GameState.home) {
       _drawHome(canvas);
       _drawRankingOverlay(canvas);
@@ -37,7 +39,7 @@ extension GameRendering on BlockBlastGame {
   }
 
   // =====================================================================
-  //  Background (original: Bg tiled gradient + Responsive)
+  //  Background is owned by the full-bleed Flutter GameScreen.
   // =====================================================================
 
   void _drawFairHint(Canvas canvas) {
@@ -81,15 +83,6 @@ extension GameRendering on BlockBlastGame {
         1408,
         29,
         color: const Color(0xFFBAFFF2));
-  }
-
-  void _drawBackground(Canvas canvas) {
-    // 1:1: la home usa lo sfondo bokeh della home di riferimento, il gameplay
-    // quello della schermata di gioco (entrambi estratti dagli screenshot).
-    final isHome = state == GameState.home;
-    final bg = sprites.get(isHome ? 'BgHome' : 'Bg');
-    bg.render(canvas,
-        position: Vector2.zero(), size: Vector2(Design.width, Design.height));
   }
 
   // =====================================================================

@@ -1,0 +1,1192 @@
+{
+  "summary": {
+    "images": 100,
+    "rushImages": 20,
+    "namedSpriteImages": 80,
+    "audioFiles": 28,
+    "fontFiles": 4,
+    "manifestObjects": [
+      "Bg",
+      "BgHome",
+      "BlackBg",
+      "Block",
+      "BlockBelow",
+      "BlockShadow",
+      "Board",
+      "BtnClose",
+      "BtnGOReset",
+      "BtnHome",
+      "BtnMusic",
+      "BtnMusic2",
+      "BtnPause",
+      "BtnPlay",
+      "BtnRanking",
+      "BtnReset",
+      "BtnRevive",
+      "BtnSFX",
+      "BtnSFX2",
+      "BtnShowRanking",
+      "Cheerful",
+      "CircleGlow",
+      "ComboGlow1",
+      "ComboGlow2",
+      "ComboSprite",
+      "CrownHD",
+      "CupIcon",
+      "EarnedScoreGlow",
+      "GameOver",
+      "GlowEffect",
+      "Hand",
+      "Heart",
+      "ItemBg",
+      "LeaderboardPopup2",
+      "LightBlueBg",
+      "LineEffect",
+      "NoSpaceLeft",
+      "Particles",
+      "PausePopup",
+      "PlaceHolder",
+      "RadialProgress",
+      "ReviveCircle",
+      "Spot",
+      "Sprite2",
+      "SquareEffect",
+      "TLabel",
+      "txtBestScore",
+      "txtComboNum",
+      "txtEarnedScore",
+      "txtGOBestScore",
+      "txtGOScore",
+      "txtReviveTimer",
+      "txtScore"
+    ],
+    "variants": [
+      {
+        "name": "portrait-full-hd",
+        "width": 1080,
+        "height": 1920
+      },
+      {
+        "name": "portrait-4k",
+        "width": 2160,
+        "height": 3840
+      },
+      {
+        "name": "landscape-full-hd",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "name": "landscape-4k",
+        "width": 3840,
+        "height": 2160
+      },
+      {
+        "name": "ultrawide",
+        "width": 3440,
+        "height": 1440
+      },
+      {
+        "name": "square",
+        "width": 2048,
+        "height": 2048
+      }
+    ]
+  },
+  "entries": [
+    {
+      "path": "assets/rush/bg-game.jpg",
+      "width": 941,
+      "height": 1672,
+      "bytes": 167657,
+      "sha256": "24a48bcf49085ba0d61c5310a0e1ec08a3f17b042d4e3fd13a4d1dde7a8e4478",
+      "usage": "rush: backgrounds",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/bg-home.jpg",
+      "width": 942,
+      "height": 1670,
+      "bytes": 423846,
+      "sha256": "9b5275be46a6220210c925b1b580f0770c375169b4ee95cb496fe40ba599b655",
+      "usage": "rush: backgrounds",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/block-0-viola.png",
+      "width": 116,
+      "height": 118,
+      "bytes": 12701,
+      "sha256": "0acb8101b672afd1bbd2cf01934cd8165f916c199d368d175fa70386b7cb6aa4",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[0]"
+      ]
+    },
+    {
+      "path": "assets/rush/block-1-azzurro.png",
+      "width": 116,
+      "height": 118,
+      "bytes": 12100,
+      "sha256": "6dea2fc557473eb86209087c25621079354b0608396acc7f10846e717d30b4a9",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[1]"
+      ]
+    },
+    {
+      "path": "assets/rush/block-2-verde.png",
+      "width": 116,
+      "height": 118,
+      "bytes": 12786,
+      "sha256": "3a658329b6881003ea1e280f7f3fcbc675e71f50928cd93a452a65f85ab9bb66",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[2]"
+      ]
+    },
+    {
+      "path": "assets/rush/block-3-blu.png",
+      "width": 116,
+      "height": 118,
+      "bytes": 12424,
+      "sha256": "d1b0f8e707274adc564d95df9169d1ea35f7d20a55e5f6ae1e6f28e49ea6183e",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[3]"
+      ]
+    },
+    {
+      "path": "assets/rush/block-4-viola-scuro.png",
+      "width": 116,
+      "height": 118,
+      "bytes": 13862,
+      "sha256": "928068955884546bd22033f46988405393ffce4552515383f6de36159fc2e2bf",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[4]"
+      ]
+    },
+    {
+      "path": "assets/rush/block-5-arancione.png",
+      "width": 116,
+      "height": 118,
+      "bytes": 12413,
+      "sha256": "29eddc6fa4099f0557494d2512930de9cf9f171596d2bfcd8ea87259bbd8d71b",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[5]"
+      ]
+    },
+    {
+      "path": "assets/rush/block-6-rosso.png",
+      "width": 116,
+      "height": 118,
+      "bytes": 12687,
+      "sha256": "6c0d39d4d0c5afe844f77f8e8ffdf18c9416be9167630d856c18bcd4ed987515",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[6]"
+      ]
+    },
+    {
+      "path": "assets/rush/block-7-rosa.png",
+      "width": 116,
+      "height": 117,
+      "bytes": 12243,
+      "sha256": "3c4757428f02d4068e86e5b080a7aa999c7aae275394a034d1de160f36ad0d2d",
+      "usage": "rush: colored blocks",
+      "objects": [
+        "Block[7]"
+      ]
+    },
+    {
+      "path": "assets/rush/btn-music-off.png",
+      "width": 291,
+      "height": 291,
+      "bytes": 96948,
+      "sha256": "4a46692f716929ab2ff4f2109981ad25bcc77db2c5303540d3d1b5e0a256ca7c",
+      "usage": "rush: button icons",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/btn-music.png",
+      "width": 291,
+      "height": 291,
+      "bytes": 102819,
+      "sha256": "dd2d9be7860e2e98b3192284305bc45156fd73dc92364b1f1fae2fdfa4b053af",
+      "usage": "rush: button icons",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/btn-pause.png",
+      "width": 154,
+      "height": 157,
+      "bytes": 32443,
+      "sha256": "a60a4a9d70009bf7e452af8598dc7ce410aadf00ba060ec96e6dba63df52b3df",
+      "usage": "rush: button icons",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/btn-ranking.png",
+      "width": 294,
+      "height": 294,
+      "bytes": 102714,
+      "sha256": "7ee686a089e4985f3f5c1153341b02e47090b9c000cbcda6cb7f7e04a1c37899",
+      "usage": "rush: button icons",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/btn-sfx-off.png",
+      "width": 289,
+      "height": 289,
+      "bytes": 96237,
+      "sha256": "4f24a6d452d056220b931634afe5708d73ca23263fc1cfa7d4daff4211c20d96",
+      "usage": "rush: button icons",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/btn-sfx.png",
+      "width": 289,
+      "height": 289,
+      "bytes": 101615,
+      "sha256": "ad13aad90992c1b01bec08e1b067c99598c3600059c66e9a85e9fb4291b194ce",
+      "usage": "rush: button icons",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/crown-hd.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 887734,
+      "sha256": "df1e5e61a8a3a01300e69f14f2ca25df9f90eb202bed96618187177be710cd61",
+      "usage": "rush: crown / score",
+      "objects": [
+        "CrownHD[0]"
+      ]
+    },
+    {
+      "path": "assets/rush/crown.png",
+      "width": 140,
+      "height": 125,
+      "bytes": 30223,
+      "sha256": "812831e3a9752110e5cbefe9e590301121dd10d798ebad3472418caabd845244",
+      "usage": "rush: crown / score",
+      "objects": []
+    },
+    {
+      "path": "assets/rush/frame.png",
+      "width": 1019,
+      "height": 1031,
+      "bytes": 569053,
+      "sha256": "ef33e8e25a9cc96ee4cef4470497c483e17d7d8c375e11e389d1c4a5acfe6441",
+      "usage": "rush: board / frame",
+      "objects": [
+        "Board[0]"
+      ]
+    },
+    {
+      "path": "assets/rush/play.png",
+      "width": 682,
+      "height": 282,
+      "bytes": 183436,
+      "sha256": "b2084108a4f6384537bbc866363a6fd212aca6bef02acae571d075e179a34628",
+      "usage": "rush: button icons",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Bg-clean.png",
+      "width": 941,
+      "height": 1672,
+      "bytes": 1282171,
+      "sha256": "56d6cd87b4febb505b6dbc746a5f3fd0c88db64806267f83beaaf40ec0469bd1",
+      "usage": "game sprite: Bg",
+      "objects": [
+        "Bg[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Bg-f00.png",
+      "width": 941,
+      "height": 1672,
+      "bytes": 594744,
+      "sha256": "d0fe57747258489e66a9e7c402878afda564a4c06d53aea17e5548a7b9734142",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/BgHome-clean.png",
+      "width": 942,
+      "height": 1670,
+      "bytes": 1694429,
+      "sha256": "7a43750337a3eb50b125185bbd2befc21fb4638d3cb9e8b0d162de63c361cfd9",
+      "usage": "game sprite: BgHome",
+      "objects": [
+        "BgHome[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BgHome-f00.png",
+      "width": 942,
+      "height": 1670,
+      "bytes": 1366885,
+      "sha256": "b6eed00a90d1fceb390680b4d2ce4db9785ac4468091d734655a553b3ba61932",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/BlackBg-f00.png",
+      "width": 250,
+      "height": 250,
+      "bytes": 808,
+      "sha256": "a5e3ac69f62455786208f185da860e48866ddd1238f5b274ee2641422cba818a",
+      "usage": "game sprite: BlackBg",
+      "objects": [
+        "BlackBg[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Block-f00.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13877,
+      "sha256": "46fd0505be28eb257ef6416253fc4b94c344b3f728724d24c2f7389635a76f19",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Block-f01.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13170,
+      "sha256": "a734414912808024c795521896f6b9c44b636d7912585473f5908a09c7c01b2a",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Block-f02.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13825,
+      "sha256": "0e67c651b4f4cd51eef155842bf67de567ef5f7674cfd8e844c0028444a3103b",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Block-f03.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13288,
+      "sha256": "2aece44e2f83052cff347abb28d1a599bb0d87501b31eda9add7db56006a76a6",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Block-f04.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 15072,
+      "sha256": "981f77afc6e681db349e8394a664dcfcf7fa41ce8b269af335dd1250f5be8cc6",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Block-f05.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13663,
+      "sha256": "d2f0293c726c7e02bd93f41cd447e10ea0b593dbef0642c1174f9caa5936b07f",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Block-f06.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13958,
+      "sha256": "620519b0c4a5ef5376b7853cdf016a33badf943628840b9de530e1c677a0aa7f",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/Block-f07.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13636,
+      "sha256": "6f51a13ce7b157e4132488326b08ce5b2a73330e850a37c4fe228ff41798339c",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f00.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13877,
+      "sha256": "46fd0505be28eb257ef6416253fc4b94c344b3f728724d24c2f7389635a76f19",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f01.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13170,
+      "sha256": "a734414912808024c795521896f6b9c44b636d7912585473f5908a09c7c01b2a",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f02.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13825,
+      "sha256": "0e67c651b4f4cd51eef155842bf67de567ef5f7674cfd8e844c0028444a3103b",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[2]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f03.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13288,
+      "sha256": "2aece44e2f83052cff347abb28d1a599bb0d87501b31eda9add7db56006a76a6",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[3]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f04.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 15072,
+      "sha256": "981f77afc6e681db349e8394a664dcfcf7fa41ce8b269af335dd1250f5be8cc6",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[4]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f05.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13663,
+      "sha256": "d2f0293c726c7e02bd93f41cd447e10ea0b593dbef0642c1174f9caa5936b07f",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[5]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f06.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13958,
+      "sha256": "620519b0c4a5ef5376b7853cdf016a33badf943628840b9de530e1c677a0aa7f",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[6]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockBelow-f07.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 13636,
+      "sha256": "6f51a13ce7b157e4132488326b08ce5b2a73330e850a37c4fe228ff41798339c",
+      "usage": "game sprite: BlockBelow",
+      "objects": [
+        "BlockBelow[7]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BlockShadow-f00.png",
+      "width": 131,
+      "height": 131,
+      "bytes": 351,
+      "sha256": "a9097a3c8d4450218d0ec0010c4b5e5a2e24b064d807bbbdf29d4b4f0698d389",
+      "usage": "game sprite: BlockShadow",
+      "objects": [
+        "BlockShadow[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Board-f00.png",
+      "width": 920,
+      "height": 910,
+      "bytes": 522015,
+      "sha256": "6a7bc59369f48313bc9682a3617eb352292346166751d67cc63e6ce5c12b5188",
+      "usage": "game sprite: auxiliary",
+      "objects": []
+    },
+    {
+      "path": "assets/sprites-named/BtnClose-f00.png",
+      "width": 160,
+      "height": 160,
+      "bytes": 2142,
+      "sha256": "71fb92ec07a1bdd99e43df34f774d87e38b3ad791ac51a931cf4daf55638ed74",
+      "usage": "game sprite: BtnClose",
+      "objects": [
+        "BtnClose[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnGOReset-f00.png",
+      "width": 510,
+      "height": 177,
+      "bytes": 10542,
+      "sha256": "783b2b8be52a75b82ac78ae7fdedeba882cd3816b6fd8bf129b9fa0bb8d5e1b8",
+      "usage": "game sprite: BtnGOReset",
+      "objects": [
+        "BtnGOReset[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnHome-f00.png",
+      "width": 282,
+      "height": 115,
+      "bytes": 4461,
+      "sha256": "0fe1a66a18e567c720ef75d1254189945083e2ed4213147990c28055a56e591b",
+      "usage": "game sprite: BtnHome",
+      "objects": [
+        "BtnHome[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnMusic-f00.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 73790,
+      "sha256": "6ae54172c6c569db2eff678d4643c6412a2560797b3dd57cbdb4372dcaf9aea1",
+      "usage": "game sprite: BtnMusic",
+      "objects": [
+        "BtnMusic[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnMusic-f01.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 69253,
+      "sha256": "6cbf983105097eabdb865b2f6533f6efbf9a76c09cb873a9074411fd461d9702",
+      "usage": "game sprite: BtnMusic",
+      "objects": [
+        "BtnMusic[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnMusic2-f00.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 73790,
+      "sha256": "6ae54172c6c569db2eff678d4643c6412a2560797b3dd57cbdb4372dcaf9aea1",
+      "usage": "game sprite: BtnMusic2",
+      "objects": [
+        "BtnMusic2[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnMusic2-f01.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 69253,
+      "sha256": "6cbf983105097eabdb865b2f6533f6efbf9a76c09cb873a9074411fd461d9702",
+      "usage": "game sprite: BtnMusic2",
+      "objects": [
+        "BtnMusic2[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnPause-f00.png",
+      "width": 220,
+      "height": 220,
+      "bytes": 21359,
+      "sha256": "d09552e50c72d3e2155c1916fb566a238dc24abaecfc6cdc10729d994f254879",
+      "usage": "game sprite: BtnPause",
+      "objects": [
+        "BtnPause[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnPlay-f00.png",
+      "width": 630,
+      "height": 260,
+      "bytes": 161493,
+      "sha256": "1d10086e4fb875e26818c156826df3b6c8640e715e7a3a30ff308c0213975202",
+      "usage": "game sprite: BtnPlay",
+      "objects": [
+        "BtnPlay[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnRanking-f00.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 72313,
+      "sha256": "715a0a1aab5e3e30630a4ac2c0235890fff23d2d4fc2b7f137bdb51bdc6ee2d4",
+      "usage": "game sprite: BtnRanking",
+      "objects": [
+        "BtnRanking[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnReset-f00.png",
+      "width": 282,
+      "height": 116,
+      "bytes": 4339,
+      "sha256": "c5c3aa526a0cf33a31d1191963d88a11dc8f62c02e1dfeda157498aba272d710",
+      "usage": "game sprite: BtnReset",
+      "objects": [
+        "BtnReset[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnRevive-f00.png",
+      "width": 544,
+      "height": 188,
+      "bytes": 13643,
+      "sha256": "186b177a46a0ed234ec89a0b511f36ad22e0dabeda122fb5796466aef60c1793",
+      "usage": "game sprite: BtnRevive",
+      "objects": [
+        "BtnRevive[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnSFX-f00.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 74276,
+      "sha256": "b5f0f1db7a0f03fd4c2a3ea37fe764471a5da16607e148d69169e73f9491f0c1",
+      "usage": "game sprite: BtnSFX",
+      "objects": [
+        "BtnSFX[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnSFX-f01.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 69310,
+      "sha256": "87497d90a8b0327024940c739bfc489bfa6dc3bf98fae09d4ef68531c3f52687",
+      "usage": "game sprite: BtnSFX",
+      "objects": [
+        "BtnSFX[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnSFX2-f00.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 74276,
+      "sha256": "b5f0f1db7a0f03fd4c2a3ea37fe764471a5da16607e148d69169e73f9491f0c1",
+      "usage": "game sprite: BtnSFX2",
+      "objects": [
+        "BtnSFX2[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnSFX2-f01.png",
+      "width": 251,
+      "height": 251,
+      "bytes": 69310,
+      "sha256": "87497d90a8b0327024940c739bfc489bfa6dc3bf98fae09d4ef68531c3f52687",
+      "usage": "game sprite: BtnSFX2",
+      "objects": [
+        "BtnSFX2[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/BtnShowRanking-f00.png",
+      "width": 280,
+      "height": 114,
+      "bytes": 5552,
+      "sha256": "b9644de2641abcfdbb8caaaf623967807317f76715ca35cbaafec6ae4c4fa0fe",
+      "usage": "game sprite: BtnShowRanking",
+      "objects": [
+        "BtnShowRanking[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Cheerful-f00.png",
+      "width": 50,
+      "height": 50,
+      "bytes": 89,
+      "sha256": "c0837947a78f0e9139169ddf08d2995a6b68065e16344f6139aeccc78f51eff2",
+      "usage": "game sprite: Cheerful",
+      "objects": [
+        "Cheerful[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Cheerful-f01.png",
+      "width": 50,
+      "height": 50,
+      "bytes": 89,
+      "sha256": "c0837947a78f0e9139169ddf08d2995a6b68065e16344f6139aeccc78f51eff2",
+      "usage": "game sprite: Cheerful",
+      "objects": [
+        "Cheerful[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Cheerful-f02.png",
+      "width": 402,
+      "height": 113,
+      "bytes": 25586,
+      "sha256": "7f2b3b5d8dd95350af639494ec8cfdc97c5d01bcf969ce4eb6a61fd8146fccae",
+      "usage": "game sprite: Cheerful",
+      "objects": [
+        "Cheerful[2]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Cheerful-f03.png",
+      "width": 608,
+      "height": 142,
+      "bytes": 32345,
+      "sha256": "c621432a22826a806315b26c4f1cdc6424d061eb6c4b00d143d435499b5efacb",
+      "usage": "game sprite: Cheerful",
+      "objects": [
+        "Cheerful[3]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Cheerful-f04.png",
+      "width": 480,
+      "height": 115,
+      "bytes": 25906,
+      "sha256": "84f4e0e25a1d9fdd568d52afe30610c9ca18ab91b77e4a4f35eebe564954594f",
+      "usage": "game sprite: Cheerful",
+      "objects": [
+        "Cheerful[4]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Cheerful-f05.png",
+      "width": 603,
+      "height": 114,
+      "bytes": 31772,
+      "sha256": "d4c338679793d832da21e14a7efc3f947bf434bc12e2cf877cbf656abe5bcce8",
+      "usage": "game sprite: Cheerful",
+      "objects": [
+        "Cheerful[5]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Cheerful-f06.png",
+      "width": 662,
+      "height": 113,
+      "bytes": 31588,
+      "sha256": "0a64f28f1e0f53e884f4933c0c4dbecdfba1a78d8b5fa0ea17033b4141998739",
+      "usage": "game sprite: Cheerful",
+      "objects": [
+        "Cheerful[6]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/CircleGlow-f00.png",
+      "width": 305,
+      "height": 305,
+      "bytes": 17117,
+      "sha256": "ace40bf916ae9eda6c06192e1f6de28600dc7624e7d7336c4e209ab77e451ac4",
+      "usage": "game sprite: CircleGlow",
+      "objects": [
+        "CircleGlow[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/ComboGlow1-f00.png",
+      "width": 382,
+      "height": 382,
+      "bytes": 21972,
+      "sha256": "65f93e33ccfae7569d728c79d7efcc8cbc68d8308b99c31b4601e3344d6f4891",
+      "usage": "game sprite: ComboGlow1",
+      "objects": [
+        "ComboGlow1[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/ComboGlow2-f00.png",
+      "width": 405,
+      "height": 405,
+      "bytes": 38812,
+      "sha256": "89cb25530e0b0b9982422b923b29b9757b163620d5645de3aca12112e9a60726",
+      "usage": "game sprite: ComboGlow2",
+      "objects": [
+        "ComboGlow2[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/ComboSprite-f00.png",
+      "width": 463,
+      "height": 154,
+      "bytes": 36181,
+      "sha256": "89827ea03dc0fd69ba82592996033e7588e21482af96f8b7e1f92cbe31e5200e",
+      "usage": "game sprite: ComboSprite",
+      "objects": [
+        "ComboSprite[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/CupIcon-f00.png",
+      "width": 118,
+      "height": 101,
+      "bytes": 20764,
+      "sha256": "6db8a363bce0a48dc8cc302a3569a2dffea24541ffe74146330f412fea40bec1",
+      "usage": "game sprite: CupIcon",
+      "objects": [
+        "CupIcon[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/EarnedScoreGlow-f00.png",
+      "width": 329,
+      "height": 171,
+      "bytes": 20709,
+      "sha256": "2794d8fbe8b7e6134e469167a4b17004affe073ea9998176a30c48ecccd4fac5",
+      "usage": "game sprite: EarnedScoreGlow",
+      "objects": [
+        "EarnedScoreGlow[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/GameOver-f00.png",
+      "width": 940,
+      "height": 101,
+      "bytes": 18277,
+      "sha256": "e3ce71fdb0ddd0e4212e69c4ab968240e3d2e1835091a5b38cd7ea7d2edd9e2c",
+      "usage": "game sprite: GameOver",
+      "objects": [
+        "GameOver[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/GlowEffect-f00.png",
+      "width": 272,
+      "height": 172,
+      "bytes": 6801,
+      "sha256": "7f2a5f5ce813c76521614afd75267c539fea4d3cf6832b40c33b45c96fd11c62",
+      "usage": "game sprite: GlowEffect",
+      "objects": [
+        "GlowEffect[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Hand-f00.png",
+      "width": 228,
+      "height": 186,
+      "bytes": 27311,
+      "sha256": "ce4049372b8bed7d27ec185c052ec6849546e37c0af946e4ada81bfb2068288e",
+      "usage": "game sprite: Hand",
+      "objects": [
+        "Hand[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Heart-f00.png",
+      "width": 304,
+      "height": 304,
+      "bytes": 42551,
+      "sha256": "00031d8a8451d5312396754eba9c938c957af5df1ecaf22937a6cfb5d7977599",
+      "usage": "game sprite: Heart",
+      "objects": [
+        "Heart[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/ItemBg-f00.png",
+      "width": 733,
+      "height": 103,
+      "bytes": 1466,
+      "sha256": "a6fe05555e9ef3b53263073204dc4e3c6640bf2ccc11248e6f06fcf5ae4194ec",
+      "usage": "game sprite: ItemBg",
+      "objects": [
+        "ItemBg[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/ItemBg-f01.png",
+      "width": 733,
+      "height": 103,
+      "bytes": 1790,
+      "sha256": "22e3beb77282c02938a09e8770c6d620267d7780f2c80e2aa6b274947f73e18c",
+      "usage": "game sprite: ItemBg",
+      "objects": [
+        "ItemBg[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/LeaderboardPopup2-f00.png",
+      "width": 928,
+      "height": 1535,
+      "bytes": 11510,
+      "sha256": "78268c2d10ccd8201d2631ed86b3740633b90632ee46b3a66c20635d49d64fdf",
+      "usage": "game sprite: LeaderboardPopup2",
+      "objects": [
+        "LeaderboardPopup2[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/LightBlueBg-f00.png",
+      "width": 1277,
+      "height": 2094,
+      "bytes": 16405,
+      "sha256": "a43b78f8f40ad088276b315a91ef9210c7fd869304cdc572820cab0e5d8f23e4",
+      "usage": "game sprite: LightBlueBg",
+      "objects": [
+        "LightBlueBg[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/LineEffect-f00.png",
+      "width": 200,
+      "height": 100,
+      "bytes": 2288,
+      "sha256": "b430d5cb951c2399863c4ab84361f0a2076d080b878283fb8710b29c727e0ac3",
+      "usage": "game sprite: LineEffect",
+      "objects": [
+        "LineEffect[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/NoSpaceLeft-f00.png",
+      "width": 998,
+      "height": 295,
+      "bytes": 26962,
+      "sha256": "97562260c45bd7115a348c84e3c3bcba4568a2836ba41e1e83c0c0c48f046ed3",
+      "usage": "game sprite: NoSpaceLeft",
+      "objects": [
+        "NoSpaceLeft[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Particles-f00.png",
+      "width": 80,
+      "height": 80,
+      "bytes": 2524,
+      "sha256": "1bf20c0cde0272497e1f30f9c4fcd93401b7adcd034daecf90899b5823dbb3d3",
+      "usage": "game sprite: Particles",
+      "objects": [
+        "Particles[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/PausePopup-f00.png",
+      "width": 886,
+      "height": 1113,
+      "bytes": 9053,
+      "sha256": "c865a78901a0206169f052b3899e7aaaf2479ead18408f7c1bd4ba6c95d21c94",
+      "usage": "game sprite: PausePopup",
+      "objects": [
+        "PausePopup[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/PlaceHolder-f00.png",
+      "width": 250,
+      "height": 250,
+      "bytes": 1157,
+      "sha256": "f726aa74ed7bd86d49b04a5c948ffafe5d777e732780e380c1deb84ac031e613",
+      "usage": "game sprite: PlaceHolder",
+      "objects": [
+        "PlaceHolder[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/RadialProgress-f00.png",
+      "width": 56,
+      "height": 56,
+      "bytes": 179,
+      "sha256": "2499867e5c51b71ccf0022472f3dfd88597397689ade0daf74db8bfdfd688fd2",
+      "usage": "game sprite: RadialProgress",
+      "objects": [
+        "RadialProgress[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/ReviveCircle-f00.png",
+      "width": 237,
+      "height": 237,
+      "bytes": 20714,
+      "sha256": "ca2b589b56067eef1daf6c0b03db2c0affdf5d6dc6fc7767f79b70ac7c3d8e5b",
+      "usage": "game sprite: ReviveCircle",
+      "objects": [
+        "ReviveCircle[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Spot-f00.png",
+      "width": 120,
+      "height": 120,
+      "bytes": 9135,
+      "sha256": "5ea7d955f15f6df89538d0ce603a3107e6f69d98e0ee0ff4a9ec466c847a5c1e",
+      "usage": "game sprite: Spot",
+      "objects": [
+        "Spot[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/Sprite2-f00.png",
+      "width": 840,
+      "height": 910,
+      "bytes": 1072968,
+      "sha256": "36b156eca4b6dadeda2441b831512094908fc619e49c2c087ef3a17ce7f3d2b6",
+      "usage": "game sprite: Sprite2",
+      "objects": [
+        "Sprite2[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/SquareEffect-f00.png",
+      "width": 54,
+      "height": 54,
+      "bytes": 589,
+      "sha256": "64885489c875f36c719770788d26e45b4b9093c82b4cdb369c4c7a72d22c2e8b",
+      "usage": "game sprite: SquareEffect",
+      "objects": [
+        "SquareEffect[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/TLabel-f00.png",
+      "width": 146,
+      "height": 45,
+      "bytes": 8708,
+      "sha256": "c37727374ff85cf39dd7b64da757e4aad371eb0139b4b1064eed8a5a46601dd8",
+      "usage": "game sprite: TLabel",
+      "objects": [
+        "TLabel[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/TLabel-f01.png",
+      "width": 262,
+      "height": 45,
+      "bytes": 14693,
+      "sha256": "8348a3a2e0bf12df808e5c171be21e8f884486e9d31a4d44a8015ec101b3e0b5",
+      "usage": "game sprite: TLabel",
+      "objects": [
+        "TLabel[1]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/txtBestScore-f00.png",
+      "width": 1024,
+      "height": 128,
+      "bytes": 34723,
+      "sha256": "975ca69c6eb1e5ee4251dc20a728c0c9ba767f0cd2c3a7856f84fcdda3c7a1b9",
+      "usage": "game sprite: txtBestScore",
+      "objects": [
+        "txtBestScore[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/txtComboNum-f00.png",
+      "width": 700,
+      "height": 400,
+      "bytes": 110528,
+      "sha256": "a7c7aad31c91abf047e5735b05d8899e343135de6a61772860d6ef117c795da9",
+      "usage": "game sprite: txtComboNum",
+      "objects": [
+        "txtComboNum[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/txtEarnedScore-f00.png",
+      "width": 128,
+      "height": 512,
+      "bytes": 12729,
+      "sha256": "67a299088670b5da9db8e946793a8ca13459a57629a544506e5b534cda45016e",
+      "usage": "game sprite: txtEarnedScore",
+      "objects": [
+        "txtEarnedScore[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/txtGOBestScore-f00.png",
+      "width": 1024,
+      "height": 128,
+      "bytes": 34723,
+      "sha256": "975ca69c6eb1e5ee4251dc20a728c0c9ba767f0cd2c3a7856f84fcdda3c7a1b9",
+      "usage": "game sprite: txtGOBestScore",
+      "objects": [
+        "txtGOBestScore[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/txtGOScore-f00.png",
+      "width": 1024,
+      "height": 128,
+      "bytes": 34723,
+      "sha256": "975ca69c6eb1e5ee4251dc20a728c0c9ba767f0cd2c3a7856f84fcdda3c7a1b9",
+      "usage": "game sprite: txtGOScore",
+      "objects": [
+        "txtGOScore[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/txtReviveTimer-f00.png",
+      "width": 1024,
+      "height": 128,
+      "bytes": 34723,
+      "sha256": "975ca69c6eb1e5ee4251dc20a728c0c9ba767f0cd2c3a7856f84fcdda3c7a1b9",
+      "usage": "game sprite: txtReviveTimer",
+      "objects": [
+        "txtReviveTimer[0]"
+      ]
+    },
+    {
+      "path": "assets/sprites-named/txtScore-f00.png",
+      "width": 1024,
+      "height": 128,
+      "bytes": 34723,
+      "sha256": "975ca69c6eb1e5ee4251dc20a728c0c9ba767f0cd2c3a7856f84fcdda3c7a1b9",
+      "usage": "game sprite: txtScore",
+      "objects": [
+        "txtScore[0]"
+      ]
+    }
+  ],
+  "audio": [
+    "assets/audio/beep.mp3",
+    "assets/audio/cheerful/c2.mp3",
+    "assets/audio/cheerful/c3.mp3",
+    "assets/audio/cheerful/c4.mp3",
+    "assets/audio/cheerful/c5.mp3",
+    "assets/audio/cheerful/c6.mp3",
+    "assets/audio/lose.mp3",
+    "assets/audio/music.mp3",
+    "assets/audio/no_space.mp3",
+    "assets/audio/put.mp3",
+    "assets/audio/return.mp3",
+    "assets/audio/revive.mp3",
+    "assets/audio/score.mp3",
+    "assets/audio/score/s1.mp3",
+    "assets/audio/score/s10.mp3",
+    "assets/audio/score/s11.mp3",
+    "assets/audio/score/s13.mp3",
+    "assets/audio/score/s14.mp3",
+    "assets/audio/score/s15.mp3",
+    "assets/audio/score/s2.mp3",
+    "assets/audio/score/s3.mp3",
+    "assets/audio/score/s4.mp3",
+    "assets/audio/score/s5.mp3",
+    "assets/audio/score/s6.mp3",
+    "assets/audio/score/s7.mp3",
+    "assets/audio/score/s8.mp3",
+    "assets/audio/score/s9.mp3",
+    "assets/audio/whoosh.mp3"
+  ],
+  "fonts": [
+    "assets/fonts/LilitaOne.ttf",
+    "assets/fonts/LuckiestGuy-Regular.ttf",
+    "assets/fonts/LuckiestGuy.ttf",
+    "assets/fonts/Riffic.ttf"
+  ]
+}

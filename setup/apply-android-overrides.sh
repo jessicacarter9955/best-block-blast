@@ -14,7 +14,7 @@ ANDROID_RES="$ANDROID_APP/src/main/res"
 
 echo "Overriding Android files from $SETUP_DIR ..."
 
-# 1. AndroidManifest.xml (portrait lock, hardware accel, no cleartext)
+# 1. AndroidManifest.xml (user-chosen rotation, hardware accel, no cleartext)
 cp "$SETUP_DIR/AndroidManifest.xml" "$ANDROID_APP/src/main/AndroidManifest.xml"
 
 # 2. Styles + launch background
@@ -31,9 +31,9 @@ done
 # 4. proguard rules (for release builds with minify)
 cp "$SETUP_DIR/proguard-rules.pro" "$ANDROID_APP/proguard-rules.pro"
 
-# 5. Patch android/app/build.gradle.kts: set minSdk = 21 (webview_flutter requires 21+,
-#    but our Flame-only app could go lower; keep 21 for audio plugin compat).
-#    Also enable release-signed-with-debug for now (replace before Play Store).
+# 5. Patch android/app/build.gradle.kts: minSdk = 21 and configurable release signing.
+#    Local APKs still use debug signing, but Play Store bundles MUST use the
+#    uploaded release keystore passed via environment variables.
 BUILD_GRADLE="$ANDROID_APP/build.gradle.kts"
 if grep -q "minSdk = flutter.minSdkVersion" "$BUILD_GRADLE"; then
   sed -i 's|minSdk = flutter.minSdkVersion|minSdk = 21|' "$BUILD_GRADLE"
@@ -72,6 +72,49 @@ if 'proguardFiles(' not in new:
 p.write_text(new)
 PYEOF
   echo "  patched release signing + minify in $BUILD_GRADLE"
+fi
+
+# AAB release signing: secrets are read by Gradle from the runner environment.
+# Never copy passwords to source, generated Gradle scripts, or logs.
+if [[ -n "${ANDROID_KEYSTORE_FILE:-}" ]]; then
+  : "${ANDROID_KEYSTORE_PASSWORD:?Release keystore password missing}"
+  : "${ANDROID_KEY_ALIAS:?Release signing alias missing}"
+  : "${ANDROID_KEY_PASSWORD:?Release key password missing}"
+  [[ -f "$ANDROID_KEYSTORE_FILE" ]] || {
+    echo "Release keystore file does not exist" >&2
+    exit 1
+  }
+  python3 - <<'PYEOF'
+from pathlib import Path
+import re
+
+path = Path("android/app/build.gradle.kts")
+source = path.read_text()
+if 'create("releaseUpload")' not in source:
+    signing = '''
+    signingConfigs {
+        create("releaseUpload") {
+            storeFile = file(System.getenv("ANDROID_KEYSTORE_FILE"))
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        }
+    }
+'''
+    source, count = re.subn(r'(?m)^(    buildTypes\s*\{)', signing + r'\1', source, count=1)
+    if count != 1:
+        raise SystemExit("Cannot find Android buildTypes block for release signing")
+source, count = re.subn(
+    r'signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)',
+    'signingConfig = signingConfigs.getByName("releaseUpload")',
+    source,
+    count=1,
+)
+if count != 1:
+    raise SystemExit("Cannot replace debug signing with release keystore")
+path.write_text(source)
+PYEOF
+  echo "  releaseUpload signing configured from environment (no secret values logged)"
 fi
 
 echo "Done. Android overlay applied."

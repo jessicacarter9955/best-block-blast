@@ -1,0 +1,75 @@
+name: Audit Flutter Web Performance (Lighthouse)
+
+# Free, on-demand browser audit. Reports are saved privately as CI artifacts;
+# no source files or gameplay assets are uploaded to public Lighthouse services.
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main, codex/blockrush-six-resolution-artwork]
+    paths:
+      - 'lib/**'
+      - 'assets/**'
+      - 'web/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/audit-web-performance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  web-lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build Flutter Web release
+        run: |
+          flutter pub get
+          flutter test
+          flutter build web --release --no-tree-shake-icons --base-href /
+          du -sh build/web
+      - name: Audit in headless Chrome
+        run: |
+          mkdir -p artifacts
+          python3 -m http.server 8181 --bind 127.0.0.1 --directory build/web \
+            > /tmp/blockrush-web-server.log 2>&1 &
+          for retry in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://127.0.0.1:8181/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          # Three independent Lighthouse navigations use fresh browser
+          # profiles (cold-cache startup). A one-shot run varies too much with
+          # Playgama CDN latency to be useful as a performance regression test.
+          for sample in 1 2 3; do
+            npx --yes lighthouse@12.8.2 http://127.0.0.1:8181/ \
+              --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+              --only-categories=performance \
+              --output=html --output=json \
+              --output-path="artifacts/blockrush-lighthouse-cold-${sample}" \
+              --quiet
+          done
+      - name: Verify three real canvas startup timings
+        run: |
+          # Flutter canvas often yields NO_LCP, making Lighthouse's generic
+          # score null even when the audit itself completed. The game instead
+          # emits a User Timing measure after its first Flame scene render.
+          REPORTS=(artifacts/blockrush-lighthouse-cold-*.report.json)
+          jq -s '[.[] | {FCP_ms:.audits["first-contentful-paint"].numericValue, LCP_ms:.audits["largest-contentful-paint"].numericValue, CLS:.audits["cumulative-layout-shift"].numericValue, performanceScore:.categories.performance.score}]' "${REPORTS[@]}"
+          STARTUP_SAMPLES=$(jq -ser '[.[] | .audits["user-timings"].details.items[]? | select(.name == "blockrush-gameplay-startup") | .duration] | sort | if length == 3 then . else error("missing Flame first-frame measurements") end' "${REPORTS[@]}")
+          STARTUP_MEDIAN=$(printf '%s' "$STARTUP_SAMPLES" | jq '.[1]')
+          STARTUP_P95=$(printf '%s' "$STARTUP_SAMPLES" | jq '.[2]')
+          echo "Cold-profile first Flame frame samples (ms): $STARTUP_SAMPLES"
+          echo "Canvas startup cold-cache median: ${STARTUP_MEDIAN} ms, p95 (nearest-rank, n=3): ${STARTUP_P95} ms" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Warm-cache startup and sustained FPS are not measured by this audit.' >> "$GITHUB_STEP_SUMMARY"
+          STARTUP_MAX_MS="$STARTUP_P95" node -e 'const ms=Number(process.env.STARTUP_MAX_MS); if(!Number.isFinite(ms) || ms > 20000) { console.error("Startup regression or missing frame:", ms); process.exit(1); }'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blockrush-lighthouse-report
+          path: artifacts/blockrush-lighthouse-cold-*.*
+          retention-days: 30
+          if-no-files-found: error

@@ -181,6 +181,23 @@ void sendGameReady() {
   } catch (_) {}
 }
 
+/// User Timing metric used by headless browser QA for canvas-based games.
+/// Lighthouse may report NO_LCP for Flutter's canvas, so measure the actual
+/// first Flame gameplay render rather than treating a missing LCP as a pass.
+void markFirstGameplayFrame() {
+  try {
+    final performance = js.getProperty(js.globalThis, 'performance');
+    js.callMethod(performance, 'mark', ['blockrush-first-frame']);
+    js.callMethod(performance, 'measure', [
+      'blockrush-gameplay-startup',
+      'blockrush-html-start',
+      'blockrush-first-frame',
+    ]);
+  } catch (_) {
+    // Instrumentation must never interfere with gameplay on older hosts.
+  }
+}
+
 /// Connect host lifecycle controls after initialization.
 void listenToPlatform({
   required void Function(bool paused) onPause,

@@ -18,30 +18,60 @@ class SpriteCache {
   final Map<String, ui.Image> _images; // keyed by file path
 
   static SpriteCache? _instance;
+  static Future<SpriteCache>? _loading;
 
   /// Loads (or returns cached) the SpriteCache. Safe to call multiple
   /// times.
-  static Future<SpriteCache> load() async {
-    if (_instance != null) return _instance!;
-    final raw = await rootBundle.loadString('assets/sprites-named/manifest.json');
-    final manifest = SpriteManifest.parse(jsonDecode(raw) as List<dynamic>);
-    final images = <String, ui.Image>{};
-    // Load each unique file once.
-    final uniqueFiles = <String>{};
-    for (final obj in manifest.objectNames) {
-      for (final a in manifest.framesFor(obj)!) {
-        uniqueFiles.add(a.file);
+  static Future<SpriteCache> load() {
+    if (_instance != null) return Future.value(_instance!);
+    return _loading ??= _loadSprites();
+  }
+
+  static Future<SpriteCache> _loadSprites() async {
+    try {
+      final raw = await rootBundle.loadString('assets/sprites-named/manifest.json');
+      final manifest = SpriteManifest.parse(jsonDecode(raw) as List<dynamic>);
+      final images = <String, ui.Image>{};
+      // Load each unique file once.
+      final uniqueFiles = <String>{};
+      for (final obj in manifest.objectNames) {
+        for (final a in manifest.framesFor(obj)!) {
+          uniqueFiles.add(a.file);
+        }
       }
+      // Browser requests + image decodes were previously serialized. A bounded
+      // concurrency of 6 lets the network and decoders overlap without
+      // creating a decode burst on memory-constrained smartphones. The sprite
+      // paths and resulting image bytes remain exactly the same as before.
+      final files = uniqueFiles.toList(growable: false);
+      const parallelDecodes = 6;
+      for (var offset = 0; offset < files.length; offset += parallelDecodes) {
+        final batch = files.skip(offset).take(parallelDecodes);
+        final decoded = await Future.wait(batch.map((file) async {
+          final bytes = await rootBundle.load(file);
+          final data = bytes.buffer.asUint8List(
+            bytes.offsetInBytes,
+            bytes.lengthInBytes,
+          );
+          final codec = await ui.instantiateImageCodec(data);
+          try {
+            final frame = await codec.getNextFrame();
+            return (file: file, image: frame.image);
+          } finally {
+            codec.dispose();
+          }
+        }));
+        for (final decodedSprite in decoded) {
+          images[decodedSprite.file] = decodedSprite.image;
+        }
+      }
+      _instance = SpriteCache._(manifest, images);
+      return _instance!;
+    } catch (_) {
+      // A transient request error must not permanently poison future loads.
+      _loading = null;
+      rethrow;
     }
-    for (final file in uniqueFiles) {
-      final bytes = await rootBundle.load(file);
-      final data = bytes.buffer.asUint8List();
-      final codec = await ui.instantiateImageCodec(data);
-      final frame = await codec.getNextFrame();
-      images[file] = frame.image;
-    }
-    _instance = SpriteCache._(manifest, images);
-    return _instance!;
   }
 
   /// Returns a Flame Sprite for the given object + frame index.

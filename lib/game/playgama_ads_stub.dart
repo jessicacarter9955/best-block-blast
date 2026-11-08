@@ -15,6 +15,7 @@ String get playgamaLanguage => 'en';
 Future<String?> loadBridgeSave() async => null;
 Future<bool> saveBridgeData(String value) async => false;
 void sendGameReady() {}
+void markFirstGameplayFrame() {}
 void listenToPlatform({
   required void Function(bool paused) onPause,
   required void Function(bool enabled) onAudio,
